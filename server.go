@@ -162,21 +162,7 @@ func main() {
 			rows[i] = row
 		}
 		rows = rows[:len(titles)]
-		// fmt.Println("ROWS=", rows)
-		// for _, title := range titles {
-		// 	fmt.Println(title)
-		// }
 
-		// results := make([]interface{}, 2)
-		// result := make([]string, 3)
-		// result[0] = "one"
-		// result[1] = "2"
-		// result[2] = "three"
-		// results[0] = result
-		// result[0] = "four"
-		// result[1] = "5"
-		// result[2] = "sixe"
-		// results[1] = result
 		output := make(map[string]interface{})
 		output["terms"] = terms
 		output["results"] = rows
