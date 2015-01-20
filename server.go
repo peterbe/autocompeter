@@ -10,7 +10,7 @@ import (
 	// "github.com/xuyu/goredis"
 	"github.com/garyburd/redigo/redis"
 	"net/http"
-	// "time"
+	"time"
 	// "log"
 	"strings"
 	// "strconv"
@@ -53,9 +53,38 @@ func errHndlr(err error) {
 	}
 }
 
+func newPool(server, password string, database int) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     3,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", server)
+			if err != nil {
+				return nil, err
+			}
+			if password != "" {
+				if _, err := c.Do("AUTH", password); err != nil {
+					c.Close()
+					return nil, err
+				}
+			}
+			_, err = c.Do("SELECT", database)
+			if err != nil {
+				return nil, err
+			}
+
+			return c, err
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
+	}
+}
+
 func main() {
 	is_debug := os.Getenv("DEBUG")
-	fmt.Println("debug", is_debug)
+	// fmt.Println("debug", is_debug)
 	var debug = true
 	if is_debug == "" {
 		debug = false
@@ -63,6 +92,8 @@ func main() {
 	renderer := render.New(render.Options{
 		IndentJSON: debug,
 	})
+
+	pool := newPool("localhost:6379", "", 9)
 
 	// config := goredis.DialConfig {
 	// 	Network:  "tcp",
@@ -82,10 +113,10 @@ func main() {
 	// r := c.Cmd("select", 9)
 	// errHndlr(r.Err)
 
-	c, err := redis.Dial("tcp", "localhost:6379")
-	errHndlr(err)
-	defer c.Close()
-	c.Do("SELECT", 9)
+	// c, err := redis.Dial("tcp", "localhost:6379")
+	// errHndlr(err)
+	// defer c.Close()
+	// c.Do("SELECT", 9)
 	// errHndlr(err)
 	// fmt.Println("database_select", database_select)
 
@@ -96,9 +127,9 @@ func main() {
 	// }
 	// defer c.Close()
 	// c.Do("SELECT", 9)
-	r, err := redis.String(c.Do("GET", "fookey"))
-	errHndlr(err)
-	fmt.Println("R", r)
+	// r, err := redis.String(c.Do("GET", "fookey"))
+	// errHndlr(err)
+	// fmt.Println("R", r)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -106,8 +137,11 @@ func main() {
 	})
 	mux.HandleFunc("/v1", func(w http.ResponseWriter, req *http.Request) {
 		q := strings.Trim(req.FormValue("q"), " ")
-
 		terms := CleanWords(q)
+
+		c := pool.Get()
+		defer c.Close()
+
 		// fmt.Println("TERMS", terms)
 		// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
 		args := make([]interface{}, len(terms)+4)
