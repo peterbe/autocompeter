@@ -61,6 +61,7 @@ func main() {
 	}
 	renderer := render.New(render.Options{
 		IndentJSON: debug,
+		IsDevelopment: debug,
 	})
 
 	// config := goredis.DialConfig {
@@ -114,7 +115,8 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "Welcome to the home page!\n")
+		renderer.HTML(w, http.StatusOK, "index", nil)
+		// fmt.Fprintf(w, "Welcome to the home page!\n")
 	})
 	mux.HandleFunc("/v1", func(w http.ResponseWriter, req *http.Request) {
 		q := strings.Trim(req.FormValue("q"), " ")
