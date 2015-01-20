@@ -7,8 +7,7 @@ import (
 	"os"
 	// "github.com/gorilla/mux"
 	"github.com/fzzy/radix/redis"
-	// "github.com/xuyu/goredis"
-	// "github.com/garyburd/redigo/redis"
+	"github.com/fzzy/radix/extra/pool"
 	"net/http"
 	// "time"
 	// "log"
@@ -55,7 +54,7 @@ func errHndlr(err error) {
 
 func main() {
 	is_debug := os.Getenv("DEBUG")
-	fmt.Println("debug", is_debug)
+	// fmt.Println("debug", is_debug)
 	var debug = true
 	if is_debug == "" {
 		debug = false
@@ -82,10 +81,28 @@ func main() {
 	// r := c.Cmd("select", 9)
 	// errHndlr(r.Err)
 
-	c, err := redis.Dial("tcp", "localhost:6379")
+	df := func(network, addr string) (*redis.Client, error) {
+		client, err := redis.Dial(network, addr)
+		if err != nil {
+			return nil, err
+		}
+		err = client.Cmd("SELECT", 9).Err
+		if err != nil {
+			return nil, err
+		}
+		// if err = client.Cmd("AUTH", "SUPERSECRET").Err; err != nil {
+		// 	client.Close()
+		// 	return nil, err
+		// }
+		return client, nil
+	}
+	pool, err := pool.NewCustomPool("tcp", "127.0.0.1:6379", 10, df)
 	errHndlr(err)
-	r := c.Cmd("select", 9)
-	errHndlr(r.Err)
+
+	// c, err := redis.Dial("tcp", "localhost:6379")
+	// errHndlr(err)
+	// r := c.Cmd("select", 9)
+	// errHndlr(r.Err)
 
 	// // Using redigo
 	// c, err := redis.Dial("tcp", ":6379")
@@ -101,8 +118,11 @@ func main() {
 	})
 	mux.HandleFunc("/v1", func(w http.ResponseWriter, req *http.Request) {
 		q := strings.Trim(req.FormValue("q"), " ")
-
 		terms := CleanWords(q)
+
+		c, err := pool.Get()
+		errHndlr(err)
+		defer pool.Put(c)
 		// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
 		c.Append("ZINTERSTORE", "$tmp", len(terms), terms, "AGGREGATE", "max")
 		c.Append("ZREVRANGE", "$tmp", 0, 10, "WITHSCORES")
