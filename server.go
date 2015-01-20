@@ -6,8 +6,8 @@ import (
 	"github.com/unrolled/render"
 	"os"
 	// "github.com/gorilla/mux"
-	"github.com/fzzy/radix/redis"
 	"github.com/fzzy/radix/extra/pool"
+	"github.com/fzzy/radix/redis"
 	"net/http"
 	// "time"
 	// "log"
@@ -166,7 +166,7 @@ func main() {
 		output := make(map[string]interface{})
 		output["terms"] = terms
 		output["results"] = rows
-
+		// fmt.Println(output)
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		renderer.JSON(w, http.StatusOK, output)
 	})
