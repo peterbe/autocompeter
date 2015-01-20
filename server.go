@@ -5,16 +5,10 @@ import (
 	"github.com/codegangsta/negroni"
 	"github.com/unrolled/render"
 	"os"
-	// "github.com/gorilla/mux"
-	// "github.com/fzzy/radix/redis"
-	// "github.com/xuyu/goredis"
 	"github.com/garyburd/redigo/redis"
 	"net/http"
 	"time"
-	// "log"
 	"strings"
-	// "strconv"
-	// "regexp"
 )
 
 func CleanWords(query string) []string {
@@ -95,42 +89,6 @@ func main() {
 
 	pool := newPool("localhost:6379", "", 9)
 
-	// config := goredis.DialConfig {
-	// 	Network:  "tcp",
-	// 	Address:  "127.0.0.1:6379",
-	// 	Database: 9,
-	// 	Password: "",
-	// 	Timeout:  10*time.Second,
-	// 	MaxIdle:  10,
-	// }
-
-	// c, err := goredis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
-	// c, err := goredis.Dial(&config)
-	// errHndlr(err)
-	// defer client.Close()
-
-	// select database
-	// r := c.Cmd("select", 9)
-	// errHndlr(r.Err)
-
-	// c, err := redis.Dial("tcp", "localhost:6379")
-	// errHndlr(err)
-	// defer c.Close()
-	// c.Do("SELECT", 9)
-	// errHndlr(err)
-	// fmt.Println("database_select", database_select)
-
-	// // Using redigo
-	// c, err := redis.Dial("tcp", ":6379")
-	// if err != nil {
-	// 	// handle error
-	// }
-	// defer c.Close()
-	// c.Do("SELECT", 9)
-	// r, err := redis.String(c.Do("GET", "fookey"))
-	// errHndlr(err)
-	// fmt.Println("R", r)
-
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "Welcome to the home page!\n")
@@ -199,21 +157,6 @@ func main() {
 			rows[i] = row
 		}
 		rows = rows[:len(titles)]
-		// fmt.Println("ROWS=", rows)
-		// for _, title := range titles {
-		// 	fmt.Println(title)
-		// }
-
-		// results := make([]interface{}, 2)
-		// result := make([]string, 3)
-		// result[0] = "one"
-		// result[1] = "2"
-		// result[2] = "three"
-		// results[0] = result
-		// result[0] = "four"
-		// result[1] = "5"
-		// result[2] = "sixe"
-		// results[1] = result
 		output := make(map[string]interface{})
 		output["terms"] = terms
 		output["results"] = rows
