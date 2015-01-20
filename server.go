@@ -60,7 +60,7 @@ func main() {
 		debug = false
 	}
 	renderer := render.New(render.Options{
-		IndentJSON: debug,
+		IndentJSON:    debug,
 		IsDevelopment: debug,
 	})
 
