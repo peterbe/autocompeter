@@ -110,7 +110,7 @@ func main() {
 		terms := CleanWords(q)
 		// fmt.Println("TERMS", terms)
 		// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
-		args := make([]interface{}, len(terms) + 4)
+		args := make([]interface{}, len(terms)+4)
 		args[0] = "$tmp"
 		args[1] = len(terms)
 		for i, term := range terms {
