@@ -11,8 +11,8 @@ import (
 	"net/http"
 	// "time"
 	// "log"
+	"strconv"
 	"strings"
-	// "strconv"
 	// "regexp"
 )
 
@@ -82,12 +82,21 @@ func main() {
 	// r := c.Cmd("select", 9)
 	// errHndlr(r.Err)
 
+	REDIS_URL := os.Getenv("REDIS_URL")
+	if REDIS_URL == "" {
+		REDIS_URL = "127.0.0.1:6379"
+	}
+	REDIS_DATABASE := os.Getenv("REDIS_DATABASE")
+	if REDIS_DATABASE == "" {
+		REDIS_DATABASE = "0"
+	}
+
 	df := func(network, addr string) (*redis.Client, error) {
 		client, err := redis.Dial(network, addr)
 		if err != nil {
 			return nil, err
 		}
-		err = client.Cmd("SELECT", 9).Err
+		err = client.Cmd("SELECT", REDIS_DATABASE).Err
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +106,8 @@ func main() {
 		// }
 		return client, nil
 	}
-	pool, err := pool.NewCustomPool("tcp", "127.0.0.1:6379", 10, df)
+
+	pool, err := pool.NewCustomPool("tcp", REDIS_URL, 10, df)
 	errHndlr(err)
 
 	// c, err := redis.Dial("tcp", "localhost:6379")
@@ -115,10 +125,41 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		// this assumes there's a `templates/index.tmpl` file
 		renderer.HTML(w, http.StatusOK, "index", nil)
-		// fmt.Fprintf(w, "Welcome to the home page!\n")
 	})
-	mux.HandleFunc("/v1", func(w http.ResponseWriter, req *http.Request) {
+
+	HomeHandler := func(w http.ResponseWriter, req *http.Request) {
+
+		//}
+
+		//mux.HandleFunc("/v1", func(w http.ResponseWriter, req *http.Request) {
+		// n_str :=
+		n_str := req.FormValue("n")
+
+		var n int64
+		if n_str == "" {
+			n = 10
+		} else {
+			n, err = strconv.ParseInt(n_str, 10, 0)
+			if err != nil {
+				// error := make(map[string]string{"error": "Not a number"})
+				error := map[string]string{"error": "Not a number"}
+				renderer.JSON(w, http.StatusBadRequest, error)
+				return
+			}
+			if n <= 0 {
+				error := map[string]string{"error": "Number too small"}
+				renderer.JSON(w, http.StatusBadRequest, error)
+				return
+			}
+			if n > 100 {
+				error := map[string]string{"error": "Number too big"}
+				renderer.JSON(w, http.StatusBadRequest, error)
+				return
+			}
+		}
+
 		q := strings.Trim(req.FormValue("q"), " ")
 		terms := CleanWords(q)
 
@@ -127,14 +168,15 @@ func main() {
 		defer pool.Put(c)
 		// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
 		c.Append("ZINTERSTORE", "$tmp", len(terms), terms, "AGGREGATE", "max")
-		c.Append("ZREVRANGE", "$tmp", 0, 10, "WITHSCORES")
+		c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
 
 		c.GetReply() // the ZINTERSTORE
 		replies, err := c.GetReply().List()
+		// fmt.Println("replies", replies, len(replies))
 		errHndlr(err)
 
-		ooids := make([]string, 10+1)
-		scores := make([]string, 10+1)
+		ooids := make([]string, n+1)
+		scores := make([]string, n+1)
 		evens := 0
 		for i, element := range replies {
 			if i%2 == 0 {
@@ -171,7 +213,9 @@ func main() {
 		// fmt.Println(output)
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		renderer.JSON(w, http.StatusOK, output)
-	})
+	}
+
+	mux.HandleFunc("/v1", HomeHandler)
 
 	// router := mux.NewRouter()
 	// router.HandleFunc("/", HomeHandler)
