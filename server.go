@@ -5,7 +5,7 @@ import (
 	"github.com/codegangsta/negroni"
 	"github.com/unrolled/render"
 	"os"
-	// "github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 	"github.com/fzzy/radix/extra/pool"
 	"github.com/fzzy/radix/redis"
 	"net/http"
@@ -38,6 +38,20 @@ func CleanWords(query string) []string {
 		terms[i] = strings.ToLower(strings.Trim(strings.Trim(term, " "), "."))
 	}
 	return terms
+}
+
+func getPrefixes(title string) []string {
+	var prefixes []string
+	for _, word := range CleanWords(title) {
+		// fmt.Println("  word=", word)
+		for i := 1; i <= len(word); i++ {
+		// for i := range len(word) {
+			prefixes = append(prefixes, word[0:i])
+			// fmt.Println("    w=", word[0:i])
+		}
+		// prefixes = append(prefixes, word)
+	}
+	return prefixes
 }
 
 // func QueryScore(terms []string, title) float32 {
@@ -123,12 +137,7 @@ func main() {
 	// defer c.Close()
 	// c.Do("SELECT", 9)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		// this assumes there's a `templates/index.tmpl` file
-		renderer.HTML(w, http.StatusOK, "index", nil)
-	})
-
+	// mux := http.NewServeMux()
 	HomeHandler := func(w http.ResponseWriter, req *http.Request) {
 
 		//}
@@ -215,7 +224,89 @@ func main() {
 		renderer.JSON(w, http.StatusOK, output)
 	}
 
-	mux.HandleFunc("/v1", HomeHandler)
+	/* POSTING new stuff in */
+	UpdateHandler := func(w http.ResponseWriter, req *http.Request) {
+		values := make(map[string]string)
+
+		required := []string{"domain", "url", "title"}
+		errors := make(map[string]string)
+		var value string
+		for _, key := range required {
+			value = strings.Trim(req.FormValue(key), " ")
+			values[key] = value
+			if value == "" {
+				errors[key] = "Missing"
+			}
+		}
+
+		optional := []string{"groups", "popularity"}
+		for _, key := range optional {
+			value = strings.Trim(req.FormValue(key), " ")
+			if key == "groups" {
+				// values[key] = strings.Split(value, ",")
+				values[key] = value
+			} else if key == "popularity" {
+				if value == "" {
+					values[key] = "0"
+				} else {
+					_, err := strconv.ParseFloat(value, 0)
+					if err != nil {
+						errors[key] = "Not a number"
+					} else {
+						values[key] = value
+					}
+				}
+			} else {
+				values[key] = value
+			}
+		}
+		// fmt.Println("errors=", errors, len(errors))
+		if len(errors) > 0 {
+			error := make(map[string]interface{})
+			error["error"] = errors
+			renderer.JSON(w, http.StatusBadRequest, error)
+			return
+		}
+		// popularity, _ := strconv.ParseInt(values["popularity"], 10, 0)
+		popularity, _ := strconv.ParseFloat(values["popularity"], 0)
+
+		c, err := pool.Get()
+		errHndlr(err)
+		defer pool.Put(c)
+		// c.Cmd("FLUSHALL")
+		// fmt.Println("CAREFUL! Always flushing the database")
+		piped_commands := 0
+		for _, prefix := range getPrefixes(values["title"]) {
+			// fmt.Println("prefix=", prefix)
+			c.Append("ZADD", prefix, popularity, values["url"])
+			piped_commands += 1
+		}
+		c.Append("HSET", "$titles", values["url"], values["title"])
+		piped_commands += 1
+		// for i <= piped_commands {
+		for i := 1; i <= piped_commands; i++ {
+			// i += 1
+			if err := c.GetReply().Err; err != nil {
+				errHndlr(err)
+			}
+		}
+		// domain := req.FormValue("domain")
+		// url := req.FormValue("url")
+		// id := req.FormValue("id")
+		// title := req.FormValue("title")
+		// groups := req.FormValue("groups")
+
+		output := map[string]string{"message": "OK"}
+		renderer.JSON(w, http.StatusCreated, output)
+	}
+
+	mux := mux.NewRouter()
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		// this assumes there's a `templates/index.tmpl` file
+		renderer.HTML(w, http.StatusOK, "index", nil)
+	})
+	mux.HandleFunc("/v1", HomeHandler).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1", UpdateHandler).Methods("POST", "PUT")
 
 	// router := mux.NewRouter()
 	// router.HandleFunc("/", HomeHandler)
