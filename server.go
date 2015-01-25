@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"github.com/codegangsta/negroni"
-	"github.com/unrolled/render"
-	"os"
-	"github.com/gorilla/mux"
-	"github.com/fzzy/radix/extra/pool"
-	"github.com/fzzy/radix/redis"
-	"net/http"
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
+	"github.com/codegangsta/negroni"
+	"github.com/fzzy/radix/extra/pool"
+	"github.com/fzzy/radix/redis"
+	"github.com/gorilla/mux"
+	"github.com/unrolled/render"
+	"net/http"
+	"os"
 	// "io"
 	// "time"
 	// "log"
@@ -185,9 +185,9 @@ func main() {
 		var urls []string
 		if len(encoded_urls) == 0 {
 		} else {
-			titles, err = c.Cmd("HMGET", encoded + "$titles", encoded_urls).List()
+			titles, err = c.Cmd("HMGET", encoded+"$titles", encoded_urls).List()
 			errHndlr(err)
-			urls, err = c.Cmd("HMGET", encoded + "$urls", encoded_urls).List()
+			urls, err = c.Cmd("HMGET", encoded+"$urls", encoded_urls).List()
 			errHndlr(err)
 		}
 		rows := make([]interface{}, len(titles))
@@ -265,12 +265,12 @@ func main() {
 		// fmt.Println("CAREFUL! Always flushing the database")
 		piped_commands := 0
 		for _, prefix := range getPrefixes(values["title"]) {
-			c.Append("ZADD", encoded + prefix, popularity, values["url_encoded"])
+			c.Append("ZADD", encoded+prefix, popularity, values["url_encoded"])
 			piped_commands += 1
 		}
-		c.Append("HSET", encoded + "$titles", values["url_encoded"], values["title"])
+		c.Append("HSET", encoded+"$titles", values["url_encoded"], values["title"])
 		piped_commands += 1
-		c.Append("HSET", encoded + "$urls", values["url_encoded"], values["url"])
+		c.Append("HSET", encoded+"$urls", values["url_encoded"], values["url"])
 		piped_commands += 1
 		for i := 1; i <= piped_commands; i++ {
 			if err := c.GetReply().Err; err != nil {
