@@ -9,6 +9,9 @@ import (
 	"github.com/fzzy/radix/extra/pool"
 	"github.com/fzzy/radix/redis"
 	"net/http"
+	"crypto/md5"
+	"encoding/hex"
+	// "io"
 	// "time"
 	// "log"
 	"strconv"
@@ -40,16 +43,18 @@ func CleanWords(query string) []string {
 	return terms
 }
 
+func encodeString(str string) string {
+	h := md5.New()
+	h.Write([]byte(str))
+	return hex.EncodeToString(h.Sum(nil))[0:8]
+}
+
 func getPrefixes(title string) []string {
 	var prefixes []string
 	for _, word := range CleanWords(title) {
-		// fmt.Println("  word=", word)
 		for i := 1; i <= len(word); i++ {
-		// for i := range len(word) {
 			prefixes = append(prefixes, word[0:i])
-			// fmt.Println("    w=", word[0:i])
 		}
-		// prefixes = append(prefixes, word)
 	}
 	return prefixes
 }
@@ -77,24 +82,6 @@ func main() {
 		IndentJSON:    debug,
 		IsDevelopment: debug,
 	})
-
-	// config := goredis.DialConfig {
-	// 	Network:  "tcp",
-	// 	Address:  "127.0.0.1:6379",
-	// 	Database: 9,
-	// 	Password: "",
-	// 	Timeout:  10*time.Second,
-	// 	MaxIdle:  10,
-	// }
-
-	// c, err := goredis.DialTimeout("tcp", "127.0.0.1:6379", time.Duration(10)*time.Second)
-	// c, err := goredis.Dial(&config)
-	// errHndlr(err)
-	// defer client.Close()
-
-	// select database
-	// r := c.Cmd("select", 9)
-	// errHndlr(r.Err)
 
 	REDIS_URL := os.Getenv("REDIS_URL")
 	if REDIS_URL == "" {
@@ -124,26 +111,8 @@ func main() {
 	pool, err := pool.NewCustomPool("tcp", REDIS_URL, 10, df)
 	errHndlr(err)
 
-	// c, err := redis.Dial("tcp", "localhost:6379")
-	// errHndlr(err)
-	// r := c.Cmd("select", 9)
-	// errHndlr(r.Err)
-
-	// // Using redigo
-	// c, err := redis.Dial("tcp", ":6379")
-	// if err != nil {
-	// 	// handle error
-	// }
-	// defer c.Close()
-	// c.Do("SELECT", 9)
-
-	// mux := http.NewServeMux()
 	HomeHandler := func(w http.ResponseWriter, req *http.Request) {
 
-		//}
-
-		//mux.HandleFunc("/v1", func(w http.ResponseWriter, req *http.Request) {
-		// n_str :=
 		n_str := req.FormValue("n")
 
 		var n int64
@@ -169,14 +138,28 @@ func main() {
 			}
 		}
 
+		domain := strings.Trim(req.FormValue("domain"), " ")
+		if domain == "" {
+			error := map[string]string{"error": "'domain' missing"}
+			renderer.JSON(w, http.StatusBadRequest, error)
+			return
+		}
+
+		encoded := encodeString(domain)
+		// fmt.Println(domain, encoded)
+
 		q := strings.Trim(req.FormValue("q"), " ")
 		terms := CleanWords(q)
 
 		c, err := pool.Get()
 		errHndlr(err)
 		defer pool.Put(c)
+		encoded_terms := make([]string, len(terms))
+		for i, term := range terms {
+			encoded_terms[i] = encoded + term
+		}
 		// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
-		c.Append("ZINTERSTORE", "$tmp", len(terms), terms, "AGGREGATE", "max")
+		c.Append("ZINTERSTORE", "$tmp", len(terms), encoded_terms, "AGGREGATE", "max")
 		c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
 
 		c.GetReply() // the ZINTERSTORE
@@ -184,32 +167,34 @@ func main() {
 		// fmt.Println("replies", replies, len(replies))
 		errHndlr(err)
 
-		ooids := make([]string, n+1)
+		encoded_urls := make([]string, n+1)
 		scores := make([]string, n+1)
 		evens := 0
 		for i, element := range replies {
 			if i%2 == 0 {
-				ooids[evens] = element
+				encoded_urls[evens] = element
 				evens = evens + 1
 			} else {
 				scores[evens-1] = element
 			}
 		}
-		ooids = ooids[:evens]
+		encoded_urls = encoded_urls[:evens]
 		scores = scores[:evens]
 
 		var titles []string
-		if len(ooids) == 0 {
-			// titles = [1]string{}
+		var urls []string
+		if len(encoded_urls) == 0 {
 		} else {
-			titles, err = c.Cmd("HMGET", "$titles", ooids).List()
+			titles, err = c.Cmd("HMGET", encoded + "$titles", encoded_urls).List()
 			errHndlr(err)
-
+			urls, err = c.Cmd("HMGET", encoded + "$urls", encoded_urls).List()
+			errHndlr(err)
 		}
 		rows := make([]interface{}, len(titles))
 		for i, title := range titles {
 			row := make([]string, 2)
-			row[0] = ooids[i]
+			row[0] = urls[i]
+			// fmt.Println("scores", scores[i]+ 1000)
 			// row[1] = scores[i] * QueryScore(terms, title)
 			row[1] = title
 			rows[i] = row
@@ -270,6 +255,9 @@ func main() {
 		// popularity, _ := strconv.ParseInt(values["popularity"], 10, 0)
 		popularity, _ := strconv.ParseFloat(values["popularity"], 0)
 
+		encoded := encodeString(values["domain"])
+		values["url_encoded"] = encodeString(values["url"])
+
 		c, err := pool.Get()
 		errHndlr(err)
 		defer pool.Put(c)
@@ -277,24 +265,18 @@ func main() {
 		// fmt.Println("CAREFUL! Always flushing the database")
 		piped_commands := 0
 		for _, prefix := range getPrefixes(values["title"]) {
-			// fmt.Println("prefix=", prefix)
-			c.Append("ZADD", prefix, popularity, values["url"])
+			c.Append("ZADD", encoded + prefix, popularity, values["url_encoded"])
 			piped_commands += 1
 		}
-		c.Append("HSET", "$titles", values["url"], values["title"])
+		c.Append("HSET", encoded + "$titles", values["url_encoded"], values["title"])
 		piped_commands += 1
-		// for i <= piped_commands {
+		c.Append("HSET", encoded + "$urls", values["url_encoded"], values["url"])
+		piped_commands += 1
 		for i := 1; i <= piped_commands; i++ {
-			// i += 1
 			if err := c.GetReply().Err; err != nil {
 				errHndlr(err)
 			}
 		}
-		// domain := req.FormValue("domain")
-		// url := req.FormValue("url")
-		// id := req.FormValue("id")
-		// title := req.FormValue("title")
-		// groups := req.FormValue("groups")
 
 		output := map[string]string{"message": "OK"}
 		renderer.JSON(w, http.StatusCreated, output)
@@ -308,12 +290,8 @@ func main() {
 	mux.HandleFunc("/v1", HomeHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", UpdateHandler).Methods("POST", "PUT")
 
-	// router := mux.NewRouter()
-	// router.HandleFunc("/", HomeHandler)
-
 	n := negroni.Classic()
 	n.UseHandler(mux)
-	// n.UseHandler(router)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3001"
