@@ -289,8 +289,6 @@ func main() {
 		IsDevelopment: debug,
 	})
 
-	fmt.Println("DEBUG?", debug)
-
 	REDIS_URL := os.Getenv("REDIS_URL")
 	if REDIS_URL == "" {
 		REDIS_URL = "127.0.0.1:6379"
