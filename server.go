@@ -3,12 +3,12 @@ package main
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"github.com/codegangsta/negroni"
 	"github.com/fzzy/radix/extra/pool"
 	"github.com/fzzy/radix/redis"
 	"github.com/gorilla/mux"
+	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
 	"os"
@@ -308,6 +308,7 @@ func main() {
 
 	var err error
 	// fmt.Println("redis_url:", redis_url)
+	// fmt.Println("redis_database:", redis_database)
 	redis_pool, err = pool.NewCustomPool("tcp", redis_url, procs*10, df)
 	errHndlr(err)
 
