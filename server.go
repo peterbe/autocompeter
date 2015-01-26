@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"github.com/codegangsta/negroni"
 	"github.com/fzzy/radix/extra/pool"
@@ -252,51 +253,41 @@ func FetchHandler(w http.ResponseWriter, req *http.Request) {
 var (
 	renderer   *render.Render
 	redis_pool *pool.Pool
-	procs      int64 // because that's what ParseInt() gives us
+	procs      int
 	debug      = true
 )
 
 func main() {
+	var port = 3001
+	var redis_url = "127.0.0.1:6379"
+	var redis_database = 0
+	flag.IntVar(&port, "port", port, "Port to start the server on")
+	flag.IntVar(&procs, "procs", 1, "Number of CPU processors (0 to use max)")
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	flag.StringVar(
+		&redis_url, "redis_url", redis_url,
+		"Redis URL to tcp connect to")
+	flag.IntVar(&redis_database, "redis_database", redis_database,
+		"Redis database number to connect to")
+	flag.Parse()
+
 	// Figuring out how many processors to use.
-	procs_str := os.Getenv("PROCS")
-	max_procs := int64(runtime.NumCPU())
-	if procs_str == "" {
-		procs_str = "1"
-	}
-	var err error
-	if procs_str == "0" {
-		procs = int64(runtime.NumCPU())
-	} else {
-		procs, err = strconv.ParseInt(procs_str, 10, 0)
-		errHndlr(err)
-	}
-	if procs < 0 {
+	max_procs := runtime.NumCPU()
+	if procs == 0 {
+		procs = max_procs
+	} else if procs < 0 {
 		panic("PROCS < 0")
 	} else if procs > max_procs {
 		panic(fmt.Sprintf("PROCS > max (%v)", max_procs))
 	}
-	runtime.GOMAXPROCS(int(procs))
+	// fmt.Println("procs=", procs)
+	runtime.GOMAXPROCS(procs)
 
-	// Figuring out if this is debug mode or not.
-	if os.Getenv("DEBUG") == "" ||
-		os.Getenv("DEBUG") == "false" ||
-		os.Getenv("DEBUG") == "0" {
-		debug = false
-	}
-
+	fmt.Println("DEBUG MODE:", debug)
 	renderer = render.New(render.Options{
 		IndentJSON:    debug,
 		IsDevelopment: debug,
 	})
-
-	REDIS_URL := os.Getenv("REDIS_URL")
-	if REDIS_URL == "" {
-		REDIS_URL = "127.0.0.1:6379"
-	}
-	REDIS_DATABASE := os.Getenv("REDIS_DATABASE")
-	if REDIS_DATABASE == "" {
-		REDIS_DATABASE = "0"
-	}
 
 	df := func(network, addr string) (*redis.Client, error) {
 		client, err := redis.Dial(network, addr)
@@ -304,7 +295,7 @@ func main() {
 		if err != nil {
 			return nil, err
 		}
-		err = client.Cmd("SELECT", REDIS_DATABASE).Err
+		err = client.Cmd("SELECT", redis_database).Err
 		if err != nil {
 			return nil, err
 		}
@@ -315,7 +306,9 @@ func main() {
 		return client, nil
 	}
 
-	redis_pool, err = pool.NewCustomPool("tcp", REDIS_URL, int(procs)*10, df)
+	var err error
+	// fmt.Println("redis_url:", redis_url)
+	redis_pool, err = pool.NewCustomPool("tcp", redis_url, procs*10, df)
 	errHndlr(err)
 
 	mux := mux.NewRouter()
@@ -325,9 +318,5 @@ func main() {
 
 	n := negroni.Classic()
 	n.UseHandler(mux)
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3001"
-	}
-	n.Run(":" + port)
+	n.Run(fmt.Sprintf(":%d", port))
 }
