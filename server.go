@@ -249,23 +249,47 @@ func FetchHandler(w http.ResponseWriter, req *http.Request) {
 	renderer.JSON(w, http.StatusOK, output)
 }
 
-var renderer *render.Render
-var redis_pool *pool.Pool
+var (
+	renderer   *render.Render
+	redis_pool *pool.Pool
+	procs      int64 // because that's what ParseInt() gives us
+	debug      = true
+)
 
 func main() {
-	fmt.Println(runtime.NumCPU())
-	// runtime.GOMAXPROCS(8)
+	// Figuring out how many processors to use.
+	procs_str := os.Getenv("PROCS")
+	max_procs := int64(runtime.NumCPU())
+	if procs_str == "" {
+		procs_str = "1"
+	}
+	var err error
+	if procs_str == "0" {
+		procs = int64(runtime.NumCPU())
+	} else {
+		procs, err = strconv.ParseInt(procs_str, 10, 0)
+		errHndlr(err)
+	}
+	if procs < 0 {
+		panic("PROCS < 0")
+	} else if procs > max_procs {
+		panic(fmt.Sprintf("PROCS > max (%v)", max_procs))
+	}
+	runtime.GOMAXPROCS(int(procs))
 
-	is_debug := os.Getenv("DEBUG")
-	// fmt.Println("debug", is_debug)
-	var debug = true
-	if is_debug == "" {
+	// Figuring out if this is debug mode or not.
+	if os.Getenv("DEBUG") == "" ||
+		os.Getenv("DEBUG") == "false" ||
+		os.Getenv("DEBUG") == "0" {
 		debug = false
 	}
+
 	renderer = render.New(render.Options{
 		IndentJSON:    debug,
 		IsDevelopment: debug,
 	})
+
+	fmt.Println("DEBUG?", debug)
 
 	REDIS_URL := os.Getenv("REDIS_URL")
 	if REDIS_URL == "" {
@@ -293,15 +317,10 @@ func main() {
 		return client, nil
 	}
 
-	var err error
-	redis_pool, err = pool.NewCustomPool("tcp", REDIS_URL, 100, df)
+	redis_pool, err = pool.NewCustomPool("tcp", REDIS_URL, int(procs)*10, df)
 	errHndlr(err)
 
 	mux := mux.NewRouter()
-	// mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-	// 	// this assumes there's a `templates/index.tmpl` file
-	// 	renderer.HTML(w, http.StatusOK, "index", nil)
-	// })
 	mux.HandleFunc("/", IndexHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", FetchHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", UpdateHandler).Methods("POST", "PUT")
