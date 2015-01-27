@@ -281,6 +281,7 @@ func main() {
 		panic(fmt.Sprintf("PROCS > max (%v)", max_procs))
 	}
 	// fmt.Println("procs=", procs)
+	fmt.Printf("Running on %d procs\n", procs)
 	runtime.GOMAXPROCS(procs)
 
 	fmt.Println("DEBUG MODE:", debug)
@@ -309,7 +310,8 @@ func main() {
 	var err error
 	// fmt.Println("redis_url:", redis_url)
 	// fmt.Println("redis_database:", redis_database)
-	redis_pool, err = pool.NewCustomPool("tcp", redis_url, procs*10, df)
+	// fmt.Println("pool size", procs*10)
+	redis_pool, err = pool.NewCustomPool("tcp", redis_url, 100, df)
 	errHndlr(err)
 
 	mux := mux.NewRouter()
