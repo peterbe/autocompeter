@@ -57,7 +57,7 @@ r= requests.post('http://localhost:3000/v1', {
     'url': ' /plog/else  ',
     # 'url': '  ',
     'popularity': "11",
-    'title': u"Blogged aböut something else",
+    'title': u"Blögged about something else",
     "groups": "private,public",
 })
 assert r.status_code == 201, r.status_code
@@ -77,9 +77,13 @@ assert r.status_code == 422, r.status_code
 
 r= requests.get('http://localhost:3000/v1?q=blo&domain=peterbecom%20')
 assert r.status_code == 200, r.status_code
-# for k in r.headers:
-#     print "\t%s=%r" %(k, r.headers[k])
-print r.json()
+# print r.json()
+
+r= requests.get('http://localhost:3000/v1?q=blogg&domain=peterbecom%20')
+assert r.status_code == 200, r.status_code
+# print r.json()
+assert r.json()['results'][0][1] == u'Blögged about something else'
+
 # print r.json()['results'][1][1]
 
 r= requests.get('http://localhost:3000/v1?q=blo&domain=peterbecom&n=1')
@@ -89,4 +93,4 @@ assert len(r.json()['results']) == 1, r.json()['results']
 
 r= requests.get('http://localhost:3000/v1?q=blo&domain=air.mozilla.org')
 assert r.status_code == 200, r.status_code
-print r.json()
+# print r.json()

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/codegangsta/negroni"
+	"github.com/fiam/gounidecode/unidecode"
 	"github.com/fzzy/radix/extra/pool"
 	"github.com/fzzy/radix/redis"
 	"github.com/gorilla/mux"
@@ -35,8 +36,13 @@ func cleanWords(query string) []string {
 	query = strings.Replace(query, "'", " ", -1)
 	split := strings.Fields(strings.Trim(query, " "))
 	terms := make([]string, len(split))
+	var ascii_term string
 	for i, term := range split {
 		terms[i] = strings.ToLower(strings.Trim(strings.Trim(term, " "), "."))
+		ascii_term = unidecode.Unidecode(terms[i])
+		if ascii_term != terms[i] {
+			terms = append(terms, ascii_term)
+		}
 	}
 	return terms
 }
