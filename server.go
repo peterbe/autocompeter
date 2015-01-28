@@ -8,17 +8,13 @@ import (
 	"github.com/fzzy/radix/extra/pool"
 	"github.com/fzzy/radix/redis"
 	"github.com/gorilla/mux"
+	"github.com/mholt/binding"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
 	"os"
 	"runtime"
-	// "io"
-	// "time"
-	// "log"
-	"strconv"
 	"strings"
-	// "regexp"
 )
 
 func cleanWords(query string) []string {
@@ -78,54 +74,70 @@ func IndexHandler(w http.ResponseWriter, req *http.Request) {
 	renderer.HTML(w, http.StatusOK, "index", nil)
 }
 
-/* POSTING new stuff in */
+type UpdateForm struct {
+	Domain     string
+	Url        string
+	Title      string
+	Groups     string
+	Popularity float64
+}
+
+func (f *UpdateForm) FieldMap() binding.FieldMap {
+	return binding.FieldMap{
+		&f.Domain: binding.Field{
+			Form:     "domain",
+			Required: true,
+		},
+		&f.Url: binding.Field{
+			Form:     "url",
+			Required: true,
+		},
+		&f.Title: binding.Field{
+			Form:     "title",
+			Required: true,
+		},
+		&f.Groups:     "groups",
+		&f.Popularity: "popularity",
+	}
+}
+
+func (f UpdateForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	if strings.Trim(f.Domain, " ") == "" {
+		errs = append(errs, binding.Error{
+			FieldNames:     []string{"domain"},
+			Classification: "ComplaintError",
+			Message:        "Can't be empty",
+		})
+	}
+	if strings.Trim(f.Title, " ") == "" {
+		errs = append(errs, binding.Error{
+			FieldNames:     []string{"title"},
+			Classification: "ComplaintError",
+			Message:        "Can't be empty",
+		})
+	}
+	if strings.Trim(f.Url, " ") == "" {
+		errs = append(errs, binding.Error{
+			FieldNames:     []string{"url"},
+			Classification: "ComplaintError",
+			Message:        "Can't be empty",
+		})
+	}
+	return errs
+}
+
 func UpdateHandler(w http.ResponseWriter, req *http.Request) {
-	values := make(map[string]string)
-
-	required := []string{"domain", "url", "title"}
-	errors := make(map[string]string)
-	var value string
-	for _, key := range required {
-		value = strings.Trim(req.FormValue(key), " ")
-		values[key] = value
-		if value == "" {
-			errors[key] = "Missing"
-		}
-	}
-
-	optional := []string{"groups", "popularity"}
-	for _, key := range optional {
-		value = strings.Trim(req.FormValue(key), " ")
-		if key == "groups" {
-			// values[key] = strings.Split(value, ",")
-			values[key] = value
-		} else if key == "popularity" {
-			if value == "" {
-				values[key] = "0"
-			} else {
-				_, err := strconv.ParseFloat(value, 0)
-				if err != nil {
-					errors[key] = "Not a number"
-				} else {
-					values[key] = value
-				}
-			}
-		} else {
-			values[key] = value
-		}
-	}
-	// fmt.Println("errors=", errors, len(errors))
-	if len(errors) > 0 {
-		error := make(map[string]interface{})
-		error["error"] = errors
-		renderer.JSON(w, http.StatusBadRequest, error)
+	form := new(UpdateForm)
+	errs := binding.Bind(req, form)
+	if errs.Handle(w) {
 		return
 	}
-	// popularity, _ := strconv.ParseInt(values["popularity"], 10, 0)
-	popularity, _ := strconv.ParseFloat(values["popularity"], 0)
+	form.Domain = strings.Trim(form.Domain, " ")
+	form.Title = strings.Trim(form.Title, " ")
+	form.Url = strings.Trim(form.Url, " ")
 
-	encoded := encodeString(values["domain"])
-	values["url_encoded"] = encodeString(values["url"])
+	encoded := encodeString(form.Domain)
+	url_encoded := encodeString(form.Url)
 
 	c, err := redis_pool.Get()
 	errHndlr(err)
@@ -133,13 +145,13 @@ func UpdateHandler(w http.ResponseWriter, req *http.Request) {
 	// c.Cmd("FLUSHALL")
 	// fmt.Println("CAREFUL! Always flushing the database")
 	piped_commands := 0
-	for _, prefix := range getPrefixes(values["title"]) {
-		c.Append("ZADD", encoded+prefix, popularity, values["url_encoded"])
+	for _, prefix := range getPrefixes(form.Title) {
+		c.Append("ZADD", encoded+prefix, form.Popularity, url_encoded)
 		piped_commands += 1
 	}
-	c.Append("HSET", encoded+"$titles", values["url_encoded"], values["title"])
+	c.Append("HSET", encoded+"$titles", url_encoded, form.Title)
 	piped_commands += 1
-	c.Append("HSET", encoded+"$urls", values["url_encoded"], values["url"])
+	c.Append("HSET", encoded+"$urls", url_encoded, form.Url)
 	piped_commands += 1
 	for i := 1; i <= piped_commands; i++ {
 		if err := c.GetReply().Err; err != nil {
@@ -151,45 +163,44 @@ func UpdateHandler(w http.ResponseWriter, req *http.Request) {
 	renderer.JSON(w, http.StatusCreated, output)
 }
 
-func FetchHandler(w http.ResponseWriter, req *http.Request) {
+type FetchForm struct {
+	Number int
+	Query  string
+	Domain string
+}
 
-	n_str := req.FormValue("n")
-
-	var n int64
-	if n_str == "" {
-		n = 10
-	} else {
-		n, err := strconv.ParseInt(n_str, 10, 0)
-		if err != nil {
-			// error := make(map[string]string{"error": "Not a number"})
-			error := map[string]string{"error": "Not a number"}
-			renderer.JSON(w, http.StatusBadRequest, error)
-			return
-		}
-		if n <= 0 {
-			error := map[string]string{"error": "Number too small"}
-			renderer.JSON(w, http.StatusBadRequest, error)
-			return
-		}
-		if n > 100 {
-			error := map[string]string{"error": "Number too big"}
-			renderer.JSON(w, http.StatusBadRequest, error)
-			return
-		}
+func (f *FetchForm) FieldMap() binding.FieldMap {
+	return binding.FieldMap{
+		&f.Number: "n",
+		&f.Query: binding.Field{
+			Form:     "q",
+			Required: true,
+		},
+		&f.Domain: binding.Field{
+			Form:     "domain",
+			Required: true,
+		},
 	}
+}
 
-	domain := strings.Trim(req.FormValue("domain"), " ")
-	if domain == "" {
-		error := map[string]string{"error": "'domain' missing"}
-		renderer.JSON(w, http.StatusBadRequest, error)
+func FetchHandler(w http.ResponseWriter, req *http.Request) {
+	form := new(FetchForm)
+	errs := binding.Bind(req, form)
+	if errs.Handle(w) {
 		return
 	}
+	n := form.Number
+	if n <= 0 {
+		n = 10 // default
+	}
 
-	encoded := encodeString(domain)
+	form.Domain = strings.Trim(form.Domain, " ")
+
+	encoded := encodeString(form.Domain)
 	// fmt.Println(domain, encoded)
 
-	q := strings.Trim(req.FormValue("q"), " ")
-	terms := cleanWords(q)
+	form.Query = strings.Trim(form.Query, " ")
+	terms := cleanWords(form.Query)
 
 	c, err := redis_pool.Get()
 	errHndlr(err)
