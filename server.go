@@ -13,7 +13,6 @@ import (
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
-	"os"
 	"runtime"
 	"strings"
 )
@@ -38,12 +37,12 @@ func cleanWords(query string) []string {
 	query = strings.Replace(query, "'", " ", -1)
 	split := strings.Fields(strings.Trim(query, " "))
 	terms := make([]string, len(split))
-	var ascii_term string
+	var asciiTerm string
 	for i, term := range split {
 		terms[i] = strings.ToLower(strings.Trim(strings.Trim(term, " "), "."))
-		ascii_term = unidecode.Unidecode(terms[i])
-		if ascii_term != terms[i] {
-			terms = append(terms, ascii_term)
+		asciiTerm = unidecode.Unidecode(terms[i])
+		if asciiTerm != terms[i] {
+			terms = append(terms, asciiTerm)
 		}
 	}
 	return terms
