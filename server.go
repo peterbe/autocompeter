@@ -13,6 +13,7 @@ import (
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
+	"os"
 	"regexp"
 	"runtime"
 	"strings"
@@ -59,7 +60,7 @@ func errHndlr(err error) {
 	if err != nil {
 		fmt.Println("error:", err)
 		panic(err)
-		// os.Exit(1)
+		os.Exit(1)
 	}
 }
 
