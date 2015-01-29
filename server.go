@@ -13,7 +13,7 @@ import (
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
-	"os"
+	// "os"
 	"regexp"
 	"runtime"
 	"strings"
