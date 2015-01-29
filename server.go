@@ -73,7 +73,7 @@ func errHndlr(err error) {
 	if err != nil {
 		fmt.Println("error:", err)
 		panic(err)
-		os.Exit(1)
+		// os.Exit(1)
 	}
 }
 
