@@ -26,6 +26,8 @@ func cleanWords(query string) []string {
 	query = strings.Replace(query, "]", " ", -1)
 	query = strings.Replace(query, "(", " ", -1)
 	query = strings.Replace(query, ")", " ", -1)
+	query = strings.Replace(query, "{", " ", -1)
+	query = strings.Replace(query, "}", " ", -1)
 	query = strings.Replace(query, "?", " ", -1)
 	query = strings.Replace(query, "!", " ", -1)
 	query = strings.Replace(query, ",", " ", -1)
