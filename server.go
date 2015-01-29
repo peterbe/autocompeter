@@ -259,11 +259,12 @@ var (
 	procs      int
 	debug      = true
 	renderer   = render.New()
+	redis_url  = "127.0.0.1:6379"
 )
 
 func main() {
 	var port = 3001
-	var redis_url = "127.0.0.1:6379"
+	// var redis_url = "127.0.0.1:6379"
 	var redis_database = 0
 	flag.IntVar(&port, "port", port, "Port to start the server on")
 	flag.IntVar(&procs, "procs", 1, "Number of CPU processors (0 to use max)")

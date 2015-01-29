@@ -1,14 +1,102 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/fzzy/radix/extra/pool"
+	"github.com/fzzy/radix/redis"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
-	// "fmt"
 )
 
-func TestHandleIndexReturnsWithStatusOK(t *testing.T) {
+// Set up the suite for running tests with Redis
+type HandlerSuite struct {
+	suite.Suite
+}
+
+func (suite *HandlerSuite) SetupTest() {
+	fmt.Println("In SetupTest()")
+	var err error
+	// var redis_url =
+	df := func(network, addr string) (*redis.Client, error) {
+		client, err := redis.Dial(network, addr)
+		// fmt.Println("DIaling")
+		if err != nil {
+			return nil, err
+		}
+		err = client.Cmd("SELECT", 8).Err
+		if err != nil {
+			return nil, err
+		}
+		return client, nil
+	}
+	redis_pool, err = pool.NewCustomPool("tcp", redis_url, 100, df)
+	if err != nil {
+		panic(err)
+	}
+}
+func TestHandlerSuite(t *testing.T) {
+	suite.Run(t, new(HandlerSuite))
+}
+
+type OKMessage struct {
+	Message string
+}
+
+type Response struct {
+	Terms   []string
+	Results [][]string
+}
+
+func (suite *HandlerSuite) TestUpdateAndFetch() {
+	// request, _ := http.NewRequest("POST", "/v1", nil)
+	form := url.Values{}
+	form.Add("domain", "peterbe.com")
+	form.Add("title", "Some blog title")
+	form.Add("url", "/some/page")
+	request, err := http.NewRequest("POST", "/v1", strings.NewReader(form.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	response := httptest.NewRecorder()
+
+	UpdateHandler(response, request)
+	decoder := json.NewDecoder(response.Body)
+	var t OKMessage
+	err = decoder.Decode(&t)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(suite.T(), t.Message, "OK")
+	assert.Equal(suite.T(), response.Code, http.StatusCreated)
+
+	// now fetch from it
+	request, _ = http.NewRequest("GET", "/v1?domain=peterbe.com&q=blo", nil)
+	response = httptest.NewRecorder()
+	FetchHandler(response, request)
+	assert.Equal(suite.T(), response.Code, http.StatusOK)
+
+	decoder = json.NewDecoder(response.Body)
+	var r Response
+	err = decoder.Decode(&r)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(suite.T(), r.Terms, []string{"blo"})
+	assert.Equal(suite.T(), len(r.Results), 1)
+	assert.Equal(suite.T(), r.Results[0][0], "/some/page")
+	assert.Equal(suite.T(), r.Results[0][1], "Some blog title")
+
+}
+
+// Test the IndexHandler without Redis
+func TestIndexHandlerReturnsWithStatusOK(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/", nil)
 	response := httptest.NewRecorder()
 
