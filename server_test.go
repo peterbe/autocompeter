@@ -1,23 +1,23 @@
 package main
 
 import (
-	// "net/http"
-	// "net/http/httptest"
 	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	// "fmt"
 )
 
-// func TestHandleIndexReturnsWithStatusOK(t *testing.T) {
-// 	request, _ := http.NewRequest("GET", "/", nil)
-// 	response := httptest.NewRecorder()
-//
-// 	IndexHandler(response, request)
-//
-// 	if response.Code != http.StatusOK {
-// 		t.Fatalf("Non-expected status code%v:\n\tbody: %v", "200", response.Code)
-// 	}
-// }
+func TestHandleIndexReturnsWithStatusOK(t *testing.T) {
+	request, _ := http.NewRequest("GET", "/", nil)
+	response := httptest.NewRecorder()
+
+	IndexHandler(response, request)
+	// fmt.Println(response.Body.String())
+	if response.Code != http.StatusOK {
+		t.Fatalf("Non-expected status code%v:\n\tbody: %v", "200", response.Code)
+	}
+}
 
 func TestCleanWordsBasic(t *testing.T) {
 	var got, expect []string

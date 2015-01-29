@@ -255,10 +255,10 @@ func FetchHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 var (
-	renderer   *render.Render
 	redis_pool *pool.Pool
 	procs      int
 	debug      = true
+	renderer   = render.New()
 )
 
 func main() {
