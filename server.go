@@ -13,28 +13,15 @@ import (
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
 	"net/http"
+	"regexp"
 	"runtime"
 	"strings"
 )
 
+var junkRegex = regexp.MustCompile(`[\[\](){}"?!,-:;,']`)
+
 func cleanWords(query string) []string {
-	// r := regexp.MustCompile(regexp.QuoteMeta("[]()"))
-	// query = r.ReplaceAllString(query, " ")
-	query = strings.Replace(query, "\"", " ", -1)
-	query = strings.Replace(query, "[", " ", -1)
-	query = strings.Replace(query, "]", " ", -1)
-	query = strings.Replace(query, "(", " ", -1)
-	query = strings.Replace(query, ")", " ", -1)
-	query = strings.Replace(query, "{", " ", -1)
-	query = strings.Replace(query, "}", " ", -1)
-	query = strings.Replace(query, "?", " ", -1)
-	query = strings.Replace(query, "!", " ", -1)
-	query = strings.Replace(query, ",", " ", -1)
-	query = strings.Replace(query, "-", " ", -1)
-	query = strings.Replace(query, ":", " ", -1)
-	query = strings.Replace(query, ";", " ", -1)
-	query = strings.Replace(query, ",", " ", -1)
-	query = strings.Replace(query, "'", " ", -1)
+	query = junkRegex.ReplaceAllString(query, " ")
 	split := strings.Fields(strings.Trim(query, " "))
 	terms := make([]string, len(split))
 	var asciiTerm string
