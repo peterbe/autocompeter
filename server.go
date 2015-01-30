@@ -170,7 +170,7 @@ func (f *FetchForm) FieldMap() binding.FieldMap {
 			Required: true,
 		},
 		&f.Domain: binding.Field{
-			Form:     "domain",
+			Form:     "d",
 			Required: true,
 		},
 	}

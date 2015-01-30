@@ -1,0 +1,4 @@
+# this is just for the end-to-end testing some tooling
+requests
+redis
+nose

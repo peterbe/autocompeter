@@ -33,13 +33,18 @@ func (suite *HandlerSuite) SetupTest() {
 		if err != nil {
 			return nil, err
 		}
+		err = client.Cmd("FLUSHDB").Err
+		if err != nil {
+			return nil, err
+		}
 		return client, nil
 	}
-	redis_pool, err = pool.NewCustomPool("tcp", redis_url, 100, df)
+	redis_pool, err = pool.NewCustomPool("tcp", redis_url, 1, df)
 	if err != nil {
 		panic(err)
 	}
 }
+
 func TestHandlerSuite(t *testing.T) {
 	suite.Run(t, new(HandlerSuite))
 }
@@ -77,7 +82,7 @@ func (suite *HandlerSuite) TestUpdateAndFetch() {
 	assert.Equal(suite.T(), response.Code, http.StatusCreated)
 
 	// now fetch from it
-	request, _ = http.NewRequest("GET", "/v1?domain=peterbe.com&q=blo", nil)
+	request, _ = http.NewRequest("GET", "/v1?d=peterbe.com&q=blo", nil)
 	response = httptest.NewRecorder()
 	FetchHandler(response, request)
 	assert.Equal(suite.T(), response.Code, http.StatusOK)

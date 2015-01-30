@@ -1,1 +1,18 @@
 A Go autocomplete Redis server.
+===============================
+
+
+
+Running tests
+=============
+
+Both the unit test and integration test will connect to **Redis on
+database 8**. It will do a flush on this database.
+
+To run the unit tests run:
+
+    go test -v
+
+To run the end-to-end test run:
+
+    python e2e.py
