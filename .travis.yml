@@ -1,0 +1,19 @@
+# This indicates to Travis that we will not use or need sudo
+# so that we can benefit from and use the cache->directories
+# directive.
+sudo: no
+
+language: go
+
+go:
+  - 1.4
+  #- tip
+
+services:
+- redis-server
+
+env:
+- REDISDATABASE=8
+
+script:
+- go test -v ./...
