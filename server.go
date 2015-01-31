@@ -135,15 +135,15 @@ func UpdateHandler(w http.ResponseWriter, req *http.Request) {
 	c, err := redis_pool.Get()
 	errHndlr(err)
 	defer redis_pool.Put(c)
-	// c.Cmd("FLUSHALL")
-	// fmt.Println("CAREFUL! Always flushing the database")
 	piped_commands := 0
 	for _, prefix := range getPrefixes(form.Title) {
 		c.Append("ZADD", encoded+prefix, form.Popularity, url_encoded)
 		piped_commands += 1
 	}
+	fmt.Println("HSET", encoded+"$titles", url_encoded, form.Title)
 	c.Append("HSET", encoded+"$titles", url_encoded, form.Title)
 	piped_commands += 1
+	// fmt.Println("HSET", encoded+"$urls", url_encoded, form.Url)
 	c.Append("HSET", encoded+"$urls", url_encoded, form.Url)
 	piped_commands += 1
 	for i := 1; i <= piped_commands; i++ {
@@ -154,6 +154,87 @@ func UpdateHandler(w http.ResponseWriter, req *http.Request) {
 
 	output := map[string]string{"message": "OK"}
 	renderer.JSON(w, http.StatusCreated, output)
+}
+
+type DeleteForm struct {
+	Domain string
+	Url    string
+}
+
+func (f *DeleteForm) FieldMap() binding.FieldMap {
+	return binding.FieldMap{
+		&f.Domain: binding.Field{
+			Form:     "domain",
+			Required: true,
+		},
+		&f.Url: binding.Field{
+			Form:     "url",
+			Required: true,
+		},
+	}
+}
+
+func (f DeleteForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	if strings.Trim(f.Domain, " ") == "" {
+		errs = append(errs, binding.Error{
+			FieldNames:     []string{"domain"},
+			Classification: "ComplaintError",
+			Message:        "Can't be empty",
+		})
+	}
+	if strings.Trim(f.Url, " ") == "" {
+		errs = append(errs, binding.Error{
+			FieldNames:     []string{"url"},
+			Classification: "ComplaintError",
+			Message:        "Can't be empty",
+		})
+	}
+	return errs
+}
+
+func DeleteHandler(w http.ResponseWriter, req *http.Request) {
+	form := new(DeleteForm)
+	errs := binding.Bind(req, form)
+	if errs.Handle(w) {
+		return
+	}
+	form.Domain = strings.Trim(form.Domain, " ")
+	form.Url = strings.Trim(form.Url, " ")
+
+	encoded := encodeString(form.Domain)
+
+	c, err := redis_pool.Get()
+	errHndlr(err)
+	defer redis_pool.CarefullyPut(c, &err)
+
+	encodedUrl := encodeString(form.Url)
+	var title string
+	// fmt.Println("HGET", encoded+"$titles", encodedUrl)
+	title, err = c.Cmd("HGET", encoded+"$titles", encodedUrl).Str()
+	if err != nil {
+		errHndlr(err)
+	}
+	// fmt.Println("Retrieved Title:", title)
+	prefixes := getPrefixes(title)
+	// fmt.Println("Prefixes Title:", prefixes)
+	pipedCommands := 0
+	for _, prefix := range prefixes {
+		c.Append("ZREM", encoded+prefix, encodedUrl)
+		pipedCommands += 1
+	}
+
+	c.Append("HDEL", encoded+"$titles", encodedUrl)
+	pipedCommands += 1
+	c.Append("HDEL", encoded+"$urls", encodedUrl)
+	pipedCommands += 1
+
+	for i := 1; i <= pipedCommands; i++ {
+		if err := c.GetReply().Err; err != nil {
+			errHndlr(err)
+		}
+	}
+	output := map[string]string{"message": "OK"}
+	renderer.JSON(w, http.StatusNoContent, output)
 }
 
 type FetchForm struct {
@@ -323,6 +404,7 @@ func main() {
 	mux.HandleFunc("/", IndexHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", FetchHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", UpdateHandler).Methods("POST", "PUT")
+	mux.HandleFunc("/v1", DeleteHandler).Methods("DELETE")
 
 	n := negroni.Classic()
 	n.UseHandler(mux)

@@ -14,6 +14,8 @@ import requests
 
 class E2E(unittest.TestCase):
 
+    _base = 'http://localhost:3000'
+
     @classmethod
     def setUpClass(cls):
         cls.c = redis.StrictRedis(host='localhost', port=6379, db=8)
@@ -22,10 +24,13 @@ class E2E(unittest.TestCase):
         self.c.flushdb()
 
     def get(self, url, *args, **kwargs):
-        return requests.get('http://localhost:3000' + url, *args, **kwargs)
+        return requests.get(self._base + url, *args, **kwargs)
 
     def post(self, url, *args, **kwargs):
-        return requests.post('http://localhost:3000' + url, *args, **kwargs)
+        return requests.post(self._base + url, *args, **kwargs)
+
+    def delete(self, url, *args, **kwargs):
+        return requests.delete(self._base + url, *args, **kwargs)
 
     def test_homepage(self):
         r = self.get('/')
@@ -214,6 +219,21 @@ class E2E(unittest.TestCase):
             [[u'/major', u'Page Major'], [u'/minor', u'Page Minor']]
         )
 
+        # insert the Minor one again but this time with a high popularity
+        r = self.post('/v1', {
+            'domain': 'peterbecom',
+            'url': '/minor',
+            'popularity': "3.0",
+            'title': u"Page Minor",
+        })
+        eq_(r.status_code, 201)
+        r = self.get('/v1?q=pag&d=peterbecom')
+        eq_(r.status_code, 200)
+        eq_(
+            r.json()['results'],
+            [[u'/minor', u'Page Minor'], [u'/major', u'Page Major']]
+        )
+
     def test_match_multiple_words(self):
         r = self.post('/v1', {
             'domain': 'peterbecom',
@@ -244,3 +264,55 @@ class E2E(unittest.TestCase):
             [u'peter']
         )
         eq_(r.json()['results'], [])
+
+    def test_delete_row(self):
+        r = self.post('/v1', {
+            'domain': 'peterbecom',
+            'url': '/plog/something',
+            'title': "This is a blog about something",
+        })
+        eq_(r.status_code, 201)
+        r = self.get('/v1?q=ab&d=peterbecom')
+        eq_(r.status_code, 200)
+        ok_(r.json()['results'])
+
+        r = self.delete('/v1', params={
+            'domain': 'peterbecom',
+            'url': ' /plog/something   ',
+        })
+        eq_(r.status_code, 204)
+        r = self.get('/v1?q=ab&d=peterbecom')
+        eq_(r.status_code, 200)
+        ok_(not r.json()['results'])
+
+    def test_delete_row_carefully(self):
+        """deleting one item, by URL, shouldn't affect other entries"""
+        # first one
+        r = self.post('/v1', {
+            'domain': 'peterbecom',
+            'url': '/plog/something',
+            'title': "This is a blog about something",
+        })
+        eq_(r.status_code, 201)
+        # second one
+        r = self.post('/v1', {
+            'domain': 'peterbecom',
+            'url': '/other/url',
+            'title': "Another blog post about nothing",
+        })
+        eq_(r.status_code, 201)
+        r = self.get('/v1?q=ab&d=peterbecom')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 2)
+
+        r = self.delete('/v1', params={
+            'domain': 'peterbecom',
+            'url': ' /plog/something   ',
+        })
+        eq_(r.status_code, 204)
+        r = self.get('/v1?q=ab&d=peterbecom')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 1)
+        eq_(r.json()['results'], [
+            [u'/other/url', u'Another blog post about nothing']
+        ])
