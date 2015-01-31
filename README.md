@@ -1,7 +1,7 @@
 A Go autocomplete Redis server.
 ===============================
 
-[![Build Status](https://travis-ci.org/peterbe/autocompeter.svg?branch=master)](https://travis-ci.org/peterbe/autocompeter) 
+[![Build Status](https://travis-ci.org/peterbe/autocompeter.svg?branch=master)](https://travis-ci.org/peterbe/autocompeter)
 
 Running tests
 -------------
@@ -15,7 +15,7 @@ To run the unit tests run:
 
 To run the end-to-end test run:
 
-    python e2e.py
+    nosetests 
 
 
 Database structure
