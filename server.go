@@ -62,26 +62,26 @@ func errHndlr(err error) {
 	}
 }
 
-func IndexHandler(w http.ResponseWriter, req *http.Request) {
+func indexHandler(w http.ResponseWriter, req *http.Request) {
 	// this assumes there's a `templates/index.tmpl` file
 	renderer.HTML(w, http.StatusOK, "index", nil)
 }
 
-type UpdateForm struct {
+type updateForm struct {
 	Domain     string
-	Url        string
+	URL        string
 	Title      string
 	Groups     string
 	Popularity float64
 }
 
-func (f *UpdateForm) FieldMap() binding.FieldMap {
+func (f *updateForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
 		&f.Domain: binding.Field{
 			Form:     "domain",
 			Required: true,
 		},
-		&f.Url: binding.Field{
+		&f.URL: binding.Field{
 			Form:     "url",
 			Required: true,
 		},
@@ -94,7 +94,7 @@ func (f *UpdateForm) FieldMap() binding.FieldMap {
 	}
 }
 
-func (f UpdateForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+func (f updateForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
 	if strings.Trim(f.Domain, " ") == "" {
 		errs = append(errs, binding.Error{
 			FieldNames:     []string{"domain"},
@@ -109,7 +109,7 @@ func (f UpdateForm) Validate(req *http.Request, errs binding.Errors) binding.Err
 			Message:        "Can't be empty",
 		})
 	}
-	if strings.Trim(f.Url, " ") == "" {
+	if strings.Trim(f.URL, " ") == "" {
 		errs = append(errs, binding.Error{
 			FieldNames:     []string{"url"},
 			Classification: "ComplaintError",
@@ -119,34 +119,32 @@ func (f UpdateForm) Validate(req *http.Request, errs binding.Errors) binding.Err
 	return errs
 }
 
-func UpdateHandler(w http.ResponseWriter, req *http.Request) {
-	form := new(UpdateForm)
+func updateHandler(w http.ResponseWriter, req *http.Request) {
+	form := new(updateForm)
 	errs := binding.Bind(req, form)
 	if errs.Handle(w) {
 		return
 	}
 	form.Domain = strings.Trim(form.Domain, " ")
 	form.Title = strings.Trim(form.Title, " ")
-	form.Url = strings.Trim(form.Url, " ")
+	form.URL = strings.Trim(form.URL, " ")
 
 	encoded := encodeString(form.Domain)
-	url_encoded := encodeString(form.Url)
+	encodedURL := encodeString(form.URL)
 
-	c, err := redis_pool.Get()
+	c, err := redisPool.Get()
 	errHndlr(err)
-	defer redis_pool.Put(c)
-	piped_commands := 0
+	defer redisPool.Put(c)
+	pipedCommands := 0
 	for _, prefix := range getPrefixes(form.Title) {
-		c.Append("ZADD", encoded+prefix, form.Popularity, url_encoded)
-		piped_commands += 1
+		c.Append("ZADD", encoded+prefix, form.Popularity, encodedURL)
+		pipedCommands++
 	}
-	fmt.Println("HSET", encoded+"$titles", url_encoded, form.Title)
-	c.Append("HSET", encoded+"$titles", url_encoded, form.Title)
-	piped_commands += 1
-	// fmt.Println("HSET", encoded+"$urls", url_encoded, form.Url)
-	c.Append("HSET", encoded+"$urls", url_encoded, form.Url)
-	piped_commands += 1
-	for i := 1; i <= piped_commands; i++ {
+	c.Append("HSET", encoded+"$titles", encodedURL, form.Title)
+	pipedCommands++
+	c.Append("HSET", encoded+"$urls", encodedURL, form.URL)
+	pipedCommands++
+	for i := 1; i <= pipedCommands; i++ {
 		if err := c.GetReply().Err; err != nil {
 			errHndlr(err)
 		}
@@ -156,25 +154,27 @@ func UpdateHandler(w http.ResponseWriter, req *http.Request) {
 	renderer.JSON(w, http.StatusCreated, output)
 }
 
-type DeleteForm struct {
+type deleteForm struct {
 	Domain string
-	Url    string
+	URL    string
 }
 
-func (f *DeleteForm) FieldMap() binding.FieldMap {
+// FieldMap defines the bindings for deleteForm
+func (f *deleteForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
 		&f.Domain: binding.Field{
 			Form:     "domain",
 			Required: true,
 		},
-		&f.Url: binding.Field{
+		&f.URL: binding.Field{
 			Form:     "url",
 			Required: true,
 		},
 	}
 }
 
-func (f DeleteForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+// Validate checks the values for deleteForm
+func (f deleteForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
 	if strings.Trim(f.Domain, " ") == "" {
 		errs = append(errs, binding.Error{
 			FieldNames:     []string{"domain"},
@@ -182,7 +182,7 @@ func (f DeleteForm) Validate(req *http.Request, errs binding.Errors) binding.Err
 			Message:        "Can't be empty",
 		})
 	}
-	if strings.Trim(f.Url, " ") == "" {
+	if strings.Trim(f.URL, " ") == "" {
 		errs = append(errs, binding.Error{
 			FieldNames:     []string{"url"},
 			Classification: "ComplaintError",
@@ -192,25 +192,24 @@ func (f DeleteForm) Validate(req *http.Request, errs binding.Errors) binding.Err
 	return errs
 }
 
-func DeleteHandler(w http.ResponseWriter, req *http.Request) {
-	form := new(DeleteForm)
+func deleteHandler(w http.ResponseWriter, req *http.Request) {
+	form := new(deleteForm)
 	errs := binding.Bind(req, form)
 	if errs.Handle(w) {
 		return
 	}
 	form.Domain = strings.Trim(form.Domain, " ")
-	form.Url = strings.Trim(form.Url, " ")
+	form.URL = strings.Trim(form.URL, " ")
 
 	encoded := encodeString(form.Domain)
 
-	c, err := redis_pool.Get()
+	c, err := redisPool.Get()
 	errHndlr(err)
-	defer redis_pool.CarefullyPut(c, &err)
+	defer redisPool.CarefullyPut(c, &err)
 
-	encodedUrl := encodeString(form.Url)
+	encodedURL := encodeString(form.URL)
 	var title string
-	// fmt.Println("HGET", encoded+"$titles", encodedUrl)
-	title, err = c.Cmd("HGET", encoded+"$titles", encodedUrl).Str()
+	title, err = c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
 	if err != nil {
 		errHndlr(err)
 	}
@@ -219,14 +218,14 @@ func DeleteHandler(w http.ResponseWriter, req *http.Request) {
 	// fmt.Println("Prefixes Title:", prefixes)
 	pipedCommands := 0
 	for _, prefix := range prefixes {
-		c.Append("ZREM", encoded+prefix, encodedUrl)
-		pipedCommands += 1
+		c.Append("ZREM", encoded+prefix, encodedURL)
+		pipedCommands++
 	}
 
-	c.Append("HDEL", encoded+"$titles", encodedUrl)
-	pipedCommands += 1
-	c.Append("HDEL", encoded+"$urls", encodedUrl)
-	pipedCommands += 1
+	c.Append("HDEL", encoded+"$titles", encodedURL)
+	pipedCommands++
+	c.Append("HDEL", encoded+"$urls", encodedURL)
+	pipedCommands++
 
 	for i := 1; i <= pipedCommands; i++ {
 		if err := c.GetReply().Err; err != nil {
@@ -237,13 +236,14 @@ func DeleteHandler(w http.ResponseWriter, req *http.Request) {
 	renderer.JSON(w, http.StatusNoContent, output)
 }
 
-type FetchForm struct {
+type fetchForm struct {
 	Number int
 	Query  string
 	Domain string
 }
 
-func (f *FetchForm) FieldMap() binding.FieldMap {
+// FieldMap defines the bindings for fetchForm
+func (f *fetchForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
 		&f.Number: "n",
 		&f.Query: binding.Field{
@@ -257,8 +257,8 @@ func (f *FetchForm) FieldMap() binding.FieldMap {
 	}
 }
 
-func FetchHandler(w http.ResponseWriter, req *http.Request) {
-	form := new(FetchForm)
+func fetchHandler(w http.ResponseWriter, req *http.Request) {
+	form := new(fetchForm)
 	errs := binding.Bind(req, form)
 	if errs.Handle(w) {
 		return
@@ -276,16 +276,16 @@ func FetchHandler(w http.ResponseWriter, req *http.Request) {
 	form.Query = strings.Trim(form.Query, " ")
 	terms := cleanWords(form.Query)
 
-	c, err := redis_pool.Get()
+	c, err := redisPool.Get()
 	errHndlr(err)
-	defer redis_pool.CarefullyPut(c, &err)
+	defer redisPool.CarefullyPut(c, &err)
 
-	encoded_terms := make([]string, len(terms))
+	encodedTerms := make([]string, len(terms))
 	for i, term := range terms {
-		encoded_terms[i] = encoded + term
+		encodedTerms[i] = encoded + term
 	}
 	// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
-	c.Append("ZINTERSTORE", "$tmp", len(terms), encoded_terms, "AGGREGATE", "max")
+	c.Append("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
 	c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
 
 	c.GetReply() // the ZINTERSTORE
@@ -293,27 +293,27 @@ func FetchHandler(w http.ResponseWriter, req *http.Request) {
 	// fmt.Println("replies", replies, len(replies))
 	errHndlr(err)
 
-	encoded_urls := make([]string, n+1)
+	encodedUrls := make([]string, n+1)
 	scores := make([]string, n+1)
 	evens := 0
 	for i, element := range replies {
 		if i%2 == 0 {
-			encoded_urls[evens] = element
+			encodedUrls[evens] = element
 			evens = evens + 1
 		} else {
 			scores[evens-1] = element
 		}
 	}
-	encoded_urls = encoded_urls[:evens]
+	encodedUrls = encodedUrls[:evens]
 	scores = scores[:evens]
 
 	var titles []string
 	var urls []string
-	if len(encoded_urls) == 0 {
+	if len(encodedUrls) == 0 {
 	} else {
-		titles, err = c.Cmd("HMGET", encoded+"$titles", encoded_urls).List()
+		titles, err = c.Cmd("HMGET", encoded+"$titles", encodedUrls).List()
 		errHndlr(err)
-		urls, err = c.Cmd("HMGET", encoded+"$urls", encoded_urls).List()
+		urls, err = c.Cmd("HMGET", encoded+"$urls", encodedUrls).List()
 		errHndlr(err)
 	}
 	rows := make([]interface{}, len(titles))
@@ -336,37 +336,42 @@ func FetchHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 var (
-	redis_pool *pool.Pool
-	procs      int
-	debug      = true
-	renderer   = render.New()
-	redis_url  = "127.0.0.1:6379"
+	redisPool *pool.Pool
+	procs     int
+	debug     = true
+	renderer  = render.New()
+	redisURL  = "127.0.0.1:6379"
 )
 
 func main() {
-	var port = 3001
-	// var redis_url = "127.0.0.1:6379"
-	var redis_database = 0
+	var (
+		port          = 3001
+		redisDatabase = 0
+		redisPoolSize = 10
+	)
 	flag.IntVar(&port, "port", port, "Port to start the server on")
 	flag.IntVar(&procs, "procs", 1, "Number of CPU processors (0 to use max)")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.StringVar(
-		&redis_url, "redis_url", redis_url,
+		&redisURL, "redisURL", redisURL,
 		"Redis URL to tcp connect to")
-	flag.IntVar(&redis_database, "redis_database", redis_database,
+	flag.IntVar(&redisDatabase, "redisDatabase", redisDatabase,
 		"Redis database number to connect to")
 	flag.Parse()
 
+	if !debug {
+		redisPoolSize = 100
+	}
+
 	// Figuring out how many processors to use.
-	max_procs := runtime.NumCPU()
+	maxProcs := runtime.NumCPU()
 	if procs == 0 {
-		procs = max_procs
+		procs = maxProcs
 	} else if procs < 0 {
 		panic("PROCS < 0")
-	} else if procs > max_procs {
-		panic(fmt.Sprintf("PROCS > max (%v)", max_procs))
+	} else if procs > maxProcs {
+		panic(fmt.Sprintf("PROCS > max (%v)", maxProcs))
 	}
-	// fmt.Println("procs=", procs)
 	fmt.Printf("Running on %d procs\n", procs)
 	runtime.GOMAXPROCS(procs)
 
@@ -378,11 +383,10 @@ func main() {
 
 	df := func(network, addr string) (*redis.Client, error) {
 		client, err := redis.Dial(network, addr)
-		// fmt.Println("DIaling")
 		if err != nil {
 			return nil, err
 		}
-		err = client.Cmd("SELECT", redis_database).Err
+		err = client.Cmd("SELECT", redisDatabase).Err
 		if err != nil {
 			return nil, err
 		}
@@ -394,17 +398,14 @@ func main() {
 	}
 
 	var err error
-	// fmt.Println("redis_url:", redis_url)
-	// fmt.Println("redis_database:", redis_database)
-	// fmt.Println("pool size", procs*10)
-	redis_pool, err = pool.NewCustomPool("tcp", redis_url, 100, df)
+	redisPool, err = pool.NewCustomPool("tcp", redisURL, redisPoolSize, df)
 	errHndlr(err)
 
 	mux := mux.NewRouter()
-	mux.HandleFunc("/", IndexHandler).Methods("GET", "HEAD")
-	mux.HandleFunc("/v1", FetchHandler).Methods("GET", "HEAD")
-	mux.HandleFunc("/v1", UpdateHandler).Methods("POST", "PUT")
-	mux.HandleFunc("/v1", DeleteHandler).Methods("DELETE")
+	mux.HandleFunc("/", indexHandler).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1", fetchHandler).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1", updateHandler).Methods("POST", "PUT")
+	mux.HandleFunc("/v1", deleteHandler).Methods("DELETE")
 
 	n := negroni.Classic()
 	n.UseHandler(mux)

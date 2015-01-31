@@ -39,7 +39,7 @@ func (suite *HandlerSuite) SetupTest() {
 		}
 		return client, nil
 	}
-	redis_pool, err = pool.NewCustomPool("tcp", redis_url, 1, df)
+	redisPool, err = pool.NewCustomPool("tcp", redisURL, 1, df)
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +71,7 @@ func (suite *HandlerSuite) TestUpdateAndFetch() {
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	response := httptest.NewRecorder()
 
-	UpdateHandler(response, request)
+	updateHandler(response, request)
 	decoder := json.NewDecoder(response.Body)
 	var t OKMessage
 	err = decoder.Decode(&t)
@@ -84,7 +84,7 @@ func (suite *HandlerSuite) TestUpdateAndFetch() {
 	// now fetch from it
 	request, _ = http.NewRequest("GET", "/v1?d=peterbe.com&q=blo", nil)
 	response = httptest.NewRecorder()
-	FetchHandler(response, request)
+	fetchHandler(response, request)
 	assert.Equal(suite.T(), response.Code, http.StatusOK)
 
 	decoder = json.NewDecoder(response.Body)
@@ -105,7 +105,7 @@ func TestIndexHandlerReturnsWithStatusOK(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/", nil)
 	response := httptest.NewRecorder()
 
-	IndexHandler(response, request)
+	indexHandler(response, request)
 	// fmt.Println(response.Body.String())
 	if response.Code != http.StatusOK {
 		t.Fatalf("Non-expected status code%v:\n\tbody: %v", "200", response.Code)
