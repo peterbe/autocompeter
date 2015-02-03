@@ -359,6 +359,9 @@ func main() {
 		"Redis database number to connect to")
 	flag.Parse()
 
+	fmt.Println("REDIS DATABASE:", redisDatabase)
+	fmt.Println("DEBUG MODE:", debug)
+
 	if !debug {
 		redisPoolSize = 100
 	}
@@ -372,10 +375,9 @@ func main() {
 	} else if procs > maxProcs {
 		panic(fmt.Sprintf("PROCS > max (%v)", maxProcs))
 	}
-	fmt.Printf("Running on %d procs\n", procs)
+	fmt.Println("PROCS:", procs)
 	runtime.GOMAXPROCS(procs)
 
-	fmt.Println("DEBUG MODE:", debug)
 	renderer = render.New(render.Options{
 		IndentJSON:    debug,
 		IsDevelopment: debug,

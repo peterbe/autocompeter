@@ -22,6 +22,7 @@ class E2E(unittest.TestCase):
 
     def setUp(self):
         self.c.flushdb()
+        assert self.c.dbsize() == 0, self.c.dbsize()
 
     def get(self, url, *args, **kwargs):
         return requests.get(self._base + url, *args, **kwargs)
