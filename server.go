@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 )
 
@@ -128,6 +129,11 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	form.Domain = strings.Trim(form.Domain, " ")
 	form.Title = strings.Trim(form.Title, " ")
 	form.URL = strings.Trim(form.URL, " ")
+	groups := []string{}
+	if len(form.Groups) != 0 {
+		groups = append(groups, strings.Split(form.Groups, ",")...)
+	}
+	sort.Strings(groups)
 
 	encoded := encodeString(form.Domain)
 	encodedURL := encodeString(form.URL)
@@ -137,8 +143,15 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	defer redisPool.Put(c)
 	pipedCommands := 0
 	for _, prefix := range getPrefixes(form.Title) {
-		c.Append("ZADD", encoded+prefix, form.Popularity, encodedURL)
-		pipedCommands++
+		if len(groups) == 0 {
+			c.Append("ZADD", encoded+prefix, form.Popularity, encodedURL)
+			pipedCommands++
+		}
+		for _, group := range groups {
+			encodedGroup := encodeString(group)
+			c.Append("ZADD", encoded+encodedGroup+prefix, form.Popularity, encodedURL)
+			pipedCommands++
+		}
 	}
 	c.Append("HSET", encoded+"$titles", encodedURL, form.Title)
 	pipedCommands++
@@ -213,9 +226,7 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		errHndlr(err)
 	}
-	// fmt.Println("Retrieved Title:", title)
 	prefixes := getPrefixes(title)
-	// fmt.Println("Prefixes Title:", prefixes)
 	pipedCommands := 0
 	for _, prefix := range prefixes {
 		c.Append("ZREM", encoded+prefix, encodedURL)
@@ -238,6 +249,7 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 
 type fetchForm struct {
 	Number int
+	Groups string
 	Query  string
 	Domain string
 }
@@ -246,6 +258,7 @@ type fetchForm struct {
 func (f *fetchForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
 		&f.Number: "n",
+		&f.Groups: "g",
 		&f.Query: binding.Field{
 			Form:     "q",
 			Required: true,
@@ -255,6 +268,12 @@ func (f *fetchForm) FieldMap() binding.FieldMap {
 			Required: true,
 		},
 	}
+}
+
+// Reply isn't a great name :)
+type Reply struct {
+	URL   string
+	Score string
 }
 
 func fetchHandler(w http.ResponseWriter, req *http.Request) {
@@ -269,9 +288,13 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	form.Domain = strings.Trim(form.Domain, " ")
+	var groups = make([]string, strings.Count(form.Groups, ",")+1)
+	for i, piece := range strings.Split(form.Groups, ",") {
+		groups[i] = strings.Trim(piece, " ")
+	}
+	sort.Strings(groups)
 
 	encoded := encodeString(form.Domain)
-	// fmt.Println(domain, encoded)
 
 	form.Query = strings.Trim(form.Query, " ")
 	terms := cleanWords(form.Query)
@@ -280,32 +303,60 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	errHndlr(err)
 	defer redisPool.CarefullyPut(c, &err)
 
-	encodedTerms := make([]string, len(terms))
-	for i, term := range terms {
-		encodedTerms[i] = encoded + term
+	getReplies := func(terms []string, group string) ([]string, error) {
+		encodedTerms := make([]string, len(terms))
+		encodedGroup := ""
+		if group != "" {
+			encodedGroup = encodeString(group)
+		}
+		for i, term := range terms {
+			encodedTerms[i] = encoded + encodedGroup + term
+		}
+		// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
+		c.Append("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
+		c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
+
+		c.GetReply() // the ZINTERSTORE
+		replies, err := c.GetReply().List()
+		return replies, err
 	}
-	// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
-	c.Append("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
-	c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
 
-	c.GetReply() // the ZINTERSTORE
-	replies, err := c.GetReply().List()
-	// fmt.Println("replies", replies, len(replies))
+	replies, err := getReplies(terms, "")
 	errHndlr(err)
-
-	encodedUrls := make([]string, n+1)
-	scores := make([]string, n+1)
-	evens := 0
+	var replyStructs []Reply
 	for i, element := range replies {
 		if i%2 == 0 {
-			encodedUrls[evens] = element
-			evens = evens + 1
-		} else {
-			scores[evens-1] = element
+			replyStructs = append(replyStructs, Reply{element, replies[i+1]})
 		}
 	}
-	encodedUrls = encodedUrls[:evens]
-	scores = scores[:evens]
+	for _, group := range groups {
+		replies, err = getReplies(terms, group)
+		errHndlr(err)
+		for i, element := range replies {
+			if i%2 == 0 {
+				replyStructs = append(replyStructs, Reply{element, replies[i+1]})
+			}
+		}
+	}
+	RemoveDuplicates := func(xs *[]Reply) {
+		found := make(map[string]bool)
+		j := 0
+		for i, x := range *xs {
+			if !found[x.URL] {
+				found[x.URL] = true
+				(*xs)[j] = (*xs)[i]
+				j++
+			}
+		}
+		*xs = (*xs)[:j]
+	}
+	RemoveDuplicates(&replyStructs)
+	// We might want to sort this here by the extra business logic
+	// on sorting.
+	encodedUrls := make([]string, len(replyStructs))
+	for i, each := range replyStructs {
+		encodedUrls[i] = each.URL
+	}
 
 	var titles []string
 	var urls []string
@@ -320,8 +371,6 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	for i, title := range titles {
 		row := make([]string, 2)
 		row[0] = urls[i]
-		// fmt.Println("scores", scores[i]+ 1000)
-		// row[1] = scores[i] * QueryScore(terms, title)
 		row[1] = title
 		rows[i] = row
 	}

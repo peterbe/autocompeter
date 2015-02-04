@@ -57,7 +57,6 @@ class E2E(unittest.TestCase):
             'url': ' /plog/something   ',
             'popularity': "11",
             'title': "This is a blog about something",
-            "groups": "private,public",
         })
         ok_(r.status_code >= 400 and r.status_code < 500)
 
@@ -65,10 +64,8 @@ class E2E(unittest.TestCase):
         r = self.post('/v1', {
             'domain': 'peterbecom',
             'url': ' /plog/something   ',
-            # 'url': '  ',
             'popularity': "12",
             'title': "This is a blog about something",
-            "groups": "private,public",
         })
         eq_(r.status_code, 201)
 
@@ -317,3 +314,26 @@ class E2E(unittest.TestCase):
         eq_(r.json()['results'], [
             [u'/other/url', u'Another blog post about nothing']
         ])
+
+    def test_search_with_groups(self):
+        r = self.post('/v1', {
+            'domain': 'airmozilla',
+            'url': '/page/public',
+            'popularity': 10,
+            'title': 'This is a PUBLIC page',
+            'groups': '',
+        })
+        r = self.post('/v1', {
+            'domain': 'airmozilla',
+            'url': '/page/private',
+            'popularity': 20,
+            'title': 'This is a PRIVATE page',
+            'groups': 'private'
+        })
+        r = self.get('/v1?q=thi&d=airmozilla')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 1)
+
+        r = self.get('/v1?q=thi&d=airmozilla&g=private,public')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 2)
