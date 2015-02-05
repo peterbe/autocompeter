@@ -21,19 +21,21 @@ import (
 
 var junkRegex = regexp.MustCompile(`[\[\](){}"?!,-:;,']`)
 
-func cleanWords(query string) []string {
+func cleanWords(query string) ([]string, bool) {
 	query = junkRegex.ReplaceAllString(query, " ")
 	split := strings.Fields(strings.Trim(query, " "))
 	terms := make([]string, len(split))
 	var asciiTerm string
+	unidecodeExpanded := false
 	for i, term := range split {
 		terms[i] = strings.ToLower(strings.Trim(strings.Trim(term, " "), "."))
 		asciiTerm = unidecode.Unidecode(terms[i])
 		if asciiTerm != terms[i] {
 			terms = append(terms, asciiTerm)
+			unidecodeExpanded = true
 		}
 	}
-	return terms
+	return terms, unidecodeExpanded
 }
 
 func encodeString(str string) string {
@@ -44,10 +46,12 @@ func encodeString(str string) string {
 
 func getPrefixes(title string) []string {
 	var prefixes []string
-	for _, word := range cleanWords(title) {
+	words, _ := cleanWords(title)
+	for _, word := range words {
 		for i := 1; i <= len(word); i++ {
 			prefixes = append(prefixes, word[0:i])
 		}
+		prefixes = append(prefixes, word+"$")
 	}
 	return prefixes
 }
@@ -288,7 +292,6 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	form.Domain = strings.Trim(form.Domain, " ")
-
 	groups := []string{}
 	if len(form.Groups) != 0 {
 		groups = append(groups, strings.Split(form.Groups, ",")...)
@@ -298,7 +301,25 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	encoded := encodeString(form.Domain)
 
 	form.Query = strings.Trim(form.Query, " ")
-	terms := cleanWords(form.Query)
+	terms, unidecodeExpanded := cleanWords(form.Query)
+	searchedTerms := make([]string, len(terms))
+	copy(searchedTerms, terms)
+
+	// If the queryhas more than one term, e.g "one spo" then we have
+	// completed the first word and don't expect autocompletion on that.
+	// For example, it should now find "one spotless thing" but not
+	// "oneanother sport".
+	// And because every word has been indexed in its complete form
+	// we should have a key called "one$" and a key called "spo" that
+	// we can search on.
+	if len(terms) > 1 && !unidecodeExpanded {
+		for i, term := range terms {
+			if i+1 < len(terms) {
+				terms[i] = term + "$"
+			}
+		}
+	}
+	// fmt.Println(searchedTerms, terms)
 
 	c, err := redisPool.Get()
 	errHndlr(err)
@@ -381,7 +402,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	rows = rows[:len(titles)]
 
 	output := make(map[string]interface{})
-	output["terms"] = terms
+	output["terms"] = searchedTerms
 	output["results"] = rows
 	// fmt.Println(output)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
