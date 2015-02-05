@@ -337,3 +337,43 @@ class E2E(unittest.TestCase):
         r = self.get('/v1?q=thi&d=airmozilla&g=private,public')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 2)
+
+    def test_multiple_words(self):
+        # first a document that will contain both words
+        r = self.post('/v1', {
+            'domain': 'airmozilla',
+            'url': '/page/first',
+            'popularity': 100,
+            'title': 'First title here',
+        })
+        r = self.post('/v1', {
+            'domain': 'airmozilla',
+            'url': '/page/second',
+            'popularity': 100,
+            'title': 'Other title here',
+        })
+        r = self.get('/v1?q=first%20here&d=airmozilla')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 1)
+        eq_(r.json()['results'][0][0], '/page/first')
+
+        # now what about a search that matches on but has a
+        # "stray word" that doesn't match either
+        r = self.get('/v1?q=other%20word&d=airmozilla')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 0)
+
+    def test_advanced_sorting(self):
+        # first, two documents that have the same popularity
+        r = self.post('/v1', {
+            'domain': 'airmozilla',
+            'url': '/page/first',
+            'popularity': 100,
+            'title': 'First title here',
+        })
+        r = self.post('/v1', {
+            'domain': 'airmozilla',
+            'url': '/page/second',
+            'popularity': 100,
+            'title': 'This is a PRIVATE page',
+        })
