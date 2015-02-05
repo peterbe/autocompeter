@@ -100,6 +100,50 @@ func (suite *HandlerSuite) TestUpdateAndFetch() {
 
 }
 
+func (suite *HandlerSuite) TestUpdateAndDelete() {
+	form := url.Values{}
+	form.Add("domain", "peterbe.com")
+	form.Add("title", "Some blog title")
+	form.Add("url", "/some/page")
+	request, err := http.NewRequest("POST", "/v1", strings.NewReader(form.Encode()))
+	if err != nil {
+		panic(err)
+	}
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	response := httptest.NewRecorder()
+
+	updateHandler(response, request)
+	assert.Equal(suite.T(), response.Code, http.StatusCreated)
+
+	// now delete it
+	form = url.Values{}
+	form.Add("domain", "peterbe.com")
+	form.Add("url", "/some/page")
+	request, err = http.NewRequest("DELETE", "/v1?"+form.Encode(), nil)
+	if err != nil {
+		panic(err)
+	}
+	response = httptest.NewRecorder()
+
+	deleteHandler(response, request)
+	assert.Equal(suite.T(), response.Code, http.StatusNoContent)
+
+	// now fetch from it
+	request, _ = http.NewRequest("GET", "/v1?d=peterbe.com&q=blo", nil)
+	response = httptest.NewRecorder()
+	fetchHandler(response, request)
+	assert.Equal(suite.T(), response.Code, http.StatusOK)
+
+	decoder := json.NewDecoder(response.Body)
+	var r Response
+	err = decoder.Decode(&r)
+	if err != nil {
+		panic(err)
+	}
+	assert.Equal(suite.T(), r.Terms, []string{"blo"})
+	assert.Equal(suite.T(), len(r.Results), 0)
+}
+
 // Test the IndexHandler without Redis
 func TestIndexHandlerReturnsWithStatusOK(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/", nil)
