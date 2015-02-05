@@ -288,9 +288,10 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	form.Domain = strings.Trim(form.Domain, " ")
-	var groups = make([]string, strings.Count(form.Groups, ",")+1)
-	for i, piece := range strings.Split(form.Groups, ",") {
-		groups[i] = strings.Trim(piece, " ")
+
+	groups := []string{}
+	if len(form.Groups) != 0 {
+		groups = append(groups, strings.Split(form.Groups, ",")...)
 	}
 	sort.Strings(groups)
 
@@ -312,12 +313,15 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		for i, term := range terms {
 			encodedTerms[i] = encoded + encodedGroup + term
 		}
-		// NOTE! Maybe we don't need the ZINTERSTORE if there's only 1 command
-		c.Append("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
-		c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
-
-		c.GetReply() // the ZINTERSTORE
-		replies, err := c.GetReply().List()
+		var replies []string
+		if len(terms) > 1 {
+			c.Append("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
+			c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
+			c.GetReply() // the ZINTERSTORE
+			replies, err = c.GetReply().List()
+		} else {
+			replies, err = c.Cmd("ZREVRANGE", encodedTerms[0], 0, n-1, "WITHSCORES").List()
+		}
 		return replies, err
 	}
 
