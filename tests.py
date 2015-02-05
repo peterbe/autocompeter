@@ -240,11 +240,11 @@ class E2E(unittest.TestCase):
         })
         eq_(r.status_code, 201)
 
-        r = self.get('/v1?q=ab%20blog&d=peterbecom')
+        r = self.get('/v1?q=blog%20ab&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(
             r.json()['terms'],
-            [u'ab', u'blog']
+            ['blog', 'ab']
         )
         eq_(
             r.json()['results'],
@@ -338,42 +338,59 @@ class E2E(unittest.TestCase):
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 2)
 
-    def test_multiple_words(self):
-        # first a document that will contain both words
+    # def test_multiple_words(self):
+    #     # first a document that will contain both words
+    #     r = self.post('/v1', {
+    #         'domain': 'airmozilla',
+    #         'url': '/page/first',
+    #         'popularity': 100,
+    #         'title': 'First title here',
+    #     })
+    #     r = self.post('/v1', {
+    #         'domain': 'airmozilla',
+    #         'url': '/page/second',
+    #         'popularity': 100,
+    #         'title': 'Other title here',
+    #     })
+    #     r = self.get('/v1?q=first%20here&d=airmozilla')
+    #     eq_(r.status_code, 200)
+    #     eq_(len(r.json()['results']), 1)
+    #     eq_(r.json()['results'][0][0], '/page/first')
+    #
+    #     # now what about a search that matches on but has a
+    #     # "stray word" that doesn't match either
+    #     r = self.get('/v1?q=other%20word&d=airmozilla')
+    #     eq_(r.status_code, 200)
+    #     eq_(len(r.json()['results']), 0)
+
+    def test_search_with_whole_words(self):
+        """if you search for 'four thi' it should find 'Four things'
+        and 'this is four items'.
+        But should it really find 'fourier thinking'?
+        """
         r = self.post('/v1', {
             'domain': 'airmozilla',
             'url': '/page/first',
-            'popularity': 100,
-            'title': 'First title here',
+            'popularity': 1,
+            'title': 'Four special things',
         })
         r = self.post('/v1', {
             'domain': 'airmozilla',
             'url': '/page/second',
-            'popularity': 100,
-            'title': 'Other title here',
+            'popularity': 2,
+            'title': 'This is four items',
         })
-        r = self.get('/v1?q=first%20here&d=airmozilla')
+        r = self.post('/v1', {
+            'domain': 'airmozilla',
+            'url': '/page/third',
+            'popularity': 3,
+            'title': 'Fourier thinking',
+        })
+
+        r = self.get('/v1?q=four&d=airmozilla')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 3)
+
+        r = self.get('/v1?q=four%20thin&d=airmozilla')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 1)
-        eq_(r.json()['results'][0][0], '/page/first')
-
-        # now what about a search that matches on but has a
-        # "stray word" that doesn't match either
-        r = self.get('/v1?q=other%20word&d=airmozilla')
-        eq_(r.status_code, 200)
-        eq_(len(r.json()['results']), 0)
-
-    def test_advanced_sorting(self):
-        # first, two documents that have the same popularity
-        r = self.post('/v1', {
-            'domain': 'airmozilla',
-            'url': '/page/first',
-            'popularity': 100,
-            'title': 'First title here',
-        })
-        r = self.post('/v1', {
-            'domain': 'airmozilla',
-            'url': '/page/second',
-            'popularity': 100,
-            'title': 'This is a PRIVATE page',
-        })

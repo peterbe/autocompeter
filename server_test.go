@@ -158,34 +158,43 @@ func TestIndexHandlerReturnsWithStatusOK(t *testing.T) {
 
 func TestCleanWordsBasic(t *testing.T) {
 	var got, expect []string
-	got = cleanWords("two words")
+	var expanded bool
+	got, expanded = cleanWords("two words")
 	expect = []string{"two", "words"}
 	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, false)
 }
 
 func TestCleanWordsNormalized(t *testing.T) {
 	var got, expect []string
-	got = cleanWords("TWO   wOrds")
+	var expanded bool
+	got, expanded = cleanWords("TWO   wOrds")
 	expect = []string{"two", "words"}
 	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, false)
 }
 
 func TestCleanWordsCleaned(t *testing.T) {
 	var got, expect []string
-	got = cleanWords(" word\"[](){}?!,-:;,' ")
+	var expanded bool
+	got, expanded = cleanWords(" word\"[](){}?!,-:;,' ")
 	expect = []string{"word"}
 	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, false)
 
-	got = cleanWords("sentence.")
+	got, expanded = cleanWords("sentence.")
 	expect = []string{"sentence"}
 	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, false)
 }
 
 func TestCleanWordsUnidecoded(t *testing.T) {
 	var got, expect []string
-	got = cleanWords(" trött ")
+	var expanded bool
+	got, expanded = cleanWords(" trött ")
 	expect = []string{"trött", "trott"}
 	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, true)
 }
 
 func TestEncodeString(t *testing.T) {
@@ -196,6 +205,6 @@ func TestEncodeString(t *testing.T) {
 
 func TestGetPrefixes(t *testing.T) {
 	got := getPrefixes("word")
-	expect := []string{"w", "wo", "wor", "word"}
+	expect := []string{"w", "wo", "wor", "word", "word$"}
 	assert.Equal(t, got, expect)
 }
