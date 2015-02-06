@@ -498,6 +498,7 @@ func main() {
 	mux.HandleFunc("/v1", deleteHandler).Methods("DELETE")
 
 	n := negroni.Classic()
+
 	n.UseHandler(mux)
 	n.Run(fmt.Sprintf(":%d", port))
 }

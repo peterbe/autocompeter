@@ -1,13 +1,330 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
+
 <head>
-<meta charset="utf-8">
-<title>Autocompeter</title>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Autocompeter - A really fast AJAX autocomplete service and widget">
+    <meta name="author" content="Peter Bengtsson">
+
+    <title>Autocompeter - A really fast AJAX autocomplete service and widget</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="/css/landing-page.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <link href="/dist/autocompeter-v1.min.css" rel="stylesheet">
+
+    <!-- now let's undo some CSS we are forced upon by bootstrap and landing-page.css -->
+    <style>
+    ._ac-wrap { width: 400px; }
+    @media only screen and (max-width : 321px) {
+      ._ac-wrap { width: 290px; }
+    }
+    ._ac-results a { font-weight: normal; }
+    ._ac-results a b { font-weight: bold; }
+
+    </style>
+
 </head>
+
 <body>
-<h1>Autocompeter</h1>
-<h2>{{.}}</h2>
-<p>To use this server, use:</p>
-<pre>curl <script>document.write(location.protocol + '//' + location.host)</script>/v1?q=term1%20term2</pre>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-fixed-top topnav" role="navigation">
+        <div class="container topnav">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand topnav" href="#">Autocompeter</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="#demo">Demo</a>
+                    </li>
+                    <li>
+                        <a href="#usage">Usage</a>
+                    </li>
+                    <li>
+                        <a href="#about">About/Features</a>
+                    </li>
+                    <li>
+                        <a href="#code">Code</a>
+                    </li>
+                    <li>
+                        <a href="#docs">Documentation</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+
+    <!-- Header -->
+    <a name="demo"></a>
+    <div class="intro-header">
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="intro-message">
+                        <h1>Autocompeter</h1>
+                        <h3>A really fast AJAX autocomplete service and widget</h3>
+                        <hr class="intro-divider">
+
+<input type="text" name="q" class="form-control" placeholder="Type something">
+<script src="/dist/autocompeter-v1.min.js"></script>
+<script>
+Autocompeter(
+  document.querySelector('input[name="q"]'),
+  'autocompeter.com'
+);
+</script>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.intro-header -->
+
+    <!-- Page Content -->
+
+    <a name="usage"></a>
+    <div class="content-section-a">
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Usage</h2>
+                    <p class="lead">
+                      Download
+                      <a href="https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter-v1.min.css">
+                        autocompeter-v1.min.css
+                      </a> and
+                      <a href="https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter-v1.min.js">
+                        autocompeter-v1.min.js
+                      </a> and insert into your site.
+                    </p>
+                    <p class="lead">
+                      Submit your page information to <b><script>document.write(location.host)</script></b>
+                      like this:
+                      <pre>curl -X POST -H "Auth-Key: yoursecurekey" \
+ -d domain=example.com -d url=/some/url \
+ -d title="Some Title" http://autocompeter.com/v1
+                      </pre>
+                    </p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                  <pre></pre>
+                  <pre></pre>
+                  <pre></pre>
+                  <pre></pre>
+                  <p class="lead">
+                    How the demo on this page was set up.
+                  </p>
+                  <ul>
+                    <li>See the HTML bits here on the right.</li>
+                    <li>The database was populate by sucking up all ~1,000+
+                      blog post titles from <a href="http://www.peterbe.com"
+                      >www.peterbe.com</a>.
+                    <li>A little bit of CSS overrides was added because
+                      this page's Boostrap CSS affected the CSS inside
+                       the autocomplete.
+                  </ul>
+
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+
+    <a name="about"></a>
+    <div class="content-section-b">
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">About</h2>
+                    <p class="lead">
+                    <b>Autocompeter</b> is a web service where you put a piece
+                    of CSS and Javascript on your site and send your titles and their URLs
+                    to <b>Autocompeter</b> so you can have an auto complete search
+                    widget on your own site.
+                    </p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                    <!-- <img class="img-responsive" src="img/ipad.png" alt=""> -->
+                    <h2 class="section-heading">Features</h2>
+                    <ul>
+                      <li>Super fast</li>
+                      <li>Free</li>
+                      <li>No server tech for you to deploy or manage</li>
+                      <li>You determine the sort order by setting a "popularity" number on each title</li>
+                      <li>Can find "Pär is naïve" by typing in "par naive</li>
+                      <li>You can submit use "groups" to differentiate content only certain users should see</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+
+    <a name="code"></a>
+    <div class="content-section-a">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-lg-offset-1 col-sm-push-6  col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">About the JavaScript and CSS</h2>
+                    <ul>
+                      <li>Javascript code <i>weighs only 3.6 Kb</i> (1.7 Kb gzipped)</li>
+                      <li>Requires no jQuery or any other Javascript framework</li>
+                      <li>CSS code <b>weighs only 781 b</b> (395 b gzipped)</li>
+                      <li>The CSS code is derived from a
+                        <a href="https://github.com/peterbe/autocompeter/blob/master/src/autocompeter.scss"
+                        >SCSS file</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-5 col-sm-pull-6  col-sm-6">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">About the server</h2>
+                    <ul>
+                      <li>Written in <a href="http://golang.org/">Go</a></li>
+                      <li>Database is <a href="http://redis.io/">Redis</a></li>
+                      <li>All code is Open Source under a BSD License</li>
+
+                    </ul>
+
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+
+
+    <a name="docs"></a>
+    <div class="content-section-b">
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Documentation</h2>
+                    <p class="lead">
+                    Under Construction. Watch this space.
+                    </p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                    <!-- <img class="img-responsive" src="img/ipad.png" alt=""> -->
+                    <h2 class="section-heading">Bugs?</h2>
+                    <p class="lead">
+                      Just <a href="https://github.com/peterbe/autocompeter/issues/new">file an issue</a>
+                      on GitHub.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <ul class="list-inline">
+                        <li>
+                            <a href="#">Home</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#demo">Demo</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#about">About/Features</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#code">Code</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#docs">Documentation</a>
+                        </li>
+                    </ul>
+                    <p class="copyright text-muted small">
+                      Copyright &copy; <a href="http://www.peterbe.com">Peter Bengtsson</a> 2015.
+                      All Rights Reserved.
+                      Design by <a href="http://startbootstrap.com/template-overviews/landing-page/"
+                      >Start Bootstrap</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+    <!-- specific to just this page -->
+    <script>
+    $('pre').eq(1).text($('link').eq(3)[0].outerHTML);
+    $('pre').eq(2).text('<input type="text" name="q" placeholder="Type something">');
+    $('pre').eq(3).text($('script').eq(0)[0].outerHTML);
+    $('pre').eq(4).text($('script').eq(1)[0].outerHTML);
+    </script>
+
 </body>
+
 </html>

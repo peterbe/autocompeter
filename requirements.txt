@@ -2,3 +2,4 @@
 requests
 redis
 nose
+click
