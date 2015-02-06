@@ -43,6 +43,15 @@ func (suite *HandlerSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
+	authKeys = new(AuthKeys)
+	authKeys.Init()
+
+	c, err := redisPool.Get()
+	errHndlr(err)
+	defer redisPool.Put(c)
+	err = c.Cmd("HSET", "$domainkeys", "xyz1234567890", "peterbe.com").Err
+	errHndlr(err)
+
 }
 
 func TestHandlerSuite(t *testing.T) {
@@ -59,9 +68,7 @@ type Response struct {
 }
 
 func (suite *HandlerSuite) TestUpdateAndFetch() {
-	// request, _ := http.NewRequest("POST", "/v1", nil)
 	form := url.Values{}
-	form.Add("domain", "peterbe.com")
 	form.Add("title", "Some blog title")
 	form.Add("url", "/some/page")
 	request, err := http.NewRequest("POST", "/v1", strings.NewReader(form.Encode()))
@@ -69,6 +76,7 @@ func (suite *HandlerSuite) TestUpdateAndFetch() {
 		panic(err)
 	}
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Auth-Key", "xyz1234567890")
 	response := httptest.NewRecorder()
 
 	updateHandler(response, request)
@@ -102,7 +110,6 @@ func (suite *HandlerSuite) TestUpdateAndFetch() {
 
 func (suite *HandlerSuite) TestUpdateAndDelete() {
 	form := url.Values{}
-	form.Add("domain", "peterbe.com")
 	form.Add("title", "Some blog title")
 	form.Add("url", "/some/page")
 	request, err := http.NewRequest("POST", "/v1", strings.NewReader(form.Encode()))
@@ -110,6 +117,7 @@ func (suite *HandlerSuite) TestUpdateAndDelete() {
 		panic(err)
 	}
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Add("Auth-Key", "xyz1234567890")
 	response := httptest.NewRecorder()
 
 	updateHandler(response, request)
@@ -117,9 +125,10 @@ func (suite *HandlerSuite) TestUpdateAndDelete() {
 
 	// now delete it
 	form = url.Values{}
-	form.Add("domain", "peterbe.com")
+	// form.Add("domain", "peterbe.com")
 	form.Add("url", "/some/page")
 	request, err = http.NewRequest("DELETE", "/v1?"+form.Encode(), nil)
+	request.Header.Add("Auth-Key", "xyz1234567890")
 	if err != nil {
 		panic(err)
 	}

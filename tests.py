@@ -23,6 +23,10 @@ class E2E(unittest.TestCase):
     def setUp(self):
         self.c.flushdb()
         assert self.c.dbsize() == 0, self.c.dbsize()
+        self._set_domain_key('xyz123', 'peterbecom')
+
+    def _set_domain_key(self, key, domain):
+        self.c.hset('$domainkeys', key, domain)
 
     def get(self, url, *args, **kwargs):
         return requests.get(self._base + url, *args, **kwargs)
@@ -43,30 +47,38 @@ class E2E(unittest.TestCase):
 
     def test_post_bad_number(self):
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': ' /plog/something   ',
             'popularity': "1.2.x",
             'title': "This is a blog about something",
             "groups": "private,public",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         ok_(r.status_code >= 400 and r.status_code < 500)
 
-    def test_empty_domain(self):
+    def test_bad_key(self):
         r = self.post('/v1', {
-            'domain': ' ',
-            'url': ' /plog/something   ',
-            'popularity': "11",
+            'url': '/plog/something',
             'title': "This is a blog about something",
-        })
-        ok_(r.status_code >= 400 and r.status_code < 500)
+        }, headers={})  # not set at all
+        eq_(r.status_code, 403)
+
+        r = self.post('/v1', {
+            'url': '/plog/something',
+            'title': "This is a blog about something",
+        }, headers={'Auth-Key': ''})  # empty
+        eq_(r.status_code, 403)
+
+        r = self.post('/v1', {
+            'url': '/plog/something',
+            'title': "This is a blog about something",
+        }, headers={'Auth-Key': 'junkjunk'})  # junk
+        eq_(r.status_code, 403)
 
     def test_post_ok(self):
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': ' /plog/something   ',
             'popularity': "12",
             'title': "This is a blog about something",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
 
         r = self.get('/v1?q=blo&d=peterbecom')
@@ -85,18 +97,18 @@ class E2E(unittest.TestCase):
 
     def test_different_domains(self):
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': ' /plog/something   ',
             'popularity': "12",
             'title': "This is a blog about something",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
 
+        # need a new auth key for this different domain
+        self._set_domain_key('abc987', 'air.mozilla.org')
         r = self.post('/v1', {
-            'domain': 'air.mozilla.org',
             'url': ' /some/page',
             'title': "Also about the word blog",
-        })
+        }, headers={'Auth-Key': 'abc987'})
         eq_(r.status_code, 201)
 
         r = self.get('/v1?q=blo&d=peterbecom')
@@ -129,10 +141,9 @@ class E2E(unittest.TestCase):
 
     def test_unidecode(self):
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': ' /some/page',
             'title': u"Blögged about something else",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
 
         r = self.get('/v1?q=blog&d=peterbecom')
@@ -166,13 +177,13 @@ class E2E(unittest.TestCase):
         )
 
     def test_fetch_with_dfferent_n(self):
+        self._set_domain_key('xyz123', 'peterbecom')
         for i in range(1, 20):
             r = self.post('/v1', {
-                'domain': 'peterbecom',
                 'url': '/%d' % i,
                 'popularity': i,
                 'title': u"Page %d" % i,
-            })
+            }, headers={'Auth-Key': 'xyz123'})
             eq_(r.status_code, 201)
 
         r = self.get('/v1?q=pag&d=peterbecom')
@@ -195,19 +206,18 @@ class E2E(unittest.TestCase):
         ok_(r.status_code >= 400 and r.status_code < 500)
 
     def test_sorted_by_popularity(self):
+        self._set_domain_key('xyz123', 'peterbecom')
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': '/minor',
             'popularity': "1.1",
             'title': u"Page Minor",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': '/major',
             'popularity': "2.7",
             'title': u"Page Major",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
 
         r = self.get('/v1?q=pag&d=peterbecom')
@@ -219,11 +229,10 @@ class E2E(unittest.TestCase):
 
         # insert the Minor one again but this time with a high popularity
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': '/minor',
             'popularity': "3.0",
             'title': u"Page Minor",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
         r = self.get('/v1?q=pag&d=peterbecom')
         eq_(r.status_code, 200)
@@ -233,11 +242,11 @@ class E2E(unittest.TestCase):
         )
 
     def test_match_multiple_words(self):
+
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': ' /plog/something   ',
             'title': "This is a blog about something",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
 
         r = self.get('/v1?q=blog%20ab&d=peterbecom')
@@ -263,21 +272,33 @@ class E2E(unittest.TestCase):
         )
         eq_(r.json()['results'], [])
 
+    def test_delete_bad_auth_key(self):
+        # not even set
+        r = self.delete('/v1', params={
+            'url': ' /plog/something   ',
+        })
+        eq_(r.status_code, 403)
+
+        # set but not recognized
+        r = self.delete('/v1', params={
+            'url': ' /plog/something   ',
+        }, headers={'Auth-Key': 'junkjunkjunk'})
+        eq_(r.status_code, 403)
+
     def test_delete_row(self):
+        self._set_domain_key('xyz123', 'peterbecom')
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': '/plog/something',
             'title': "This is a blog about something",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
         r = self.get('/v1?q=ab&d=peterbecom')
         eq_(r.status_code, 200)
         ok_(r.json()['results'])
 
         r = self.delete('/v1', params={
-            'domain': 'peterbecom',
             'url': ' /plog/something   ',
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 204)
         r = self.get('/v1?q=ab&d=peterbecom')
         eq_(r.status_code, 200)
@@ -285,28 +306,26 @@ class E2E(unittest.TestCase):
 
     def test_delete_row_carefully(self):
         """deleting one item, by URL, shouldn't affect other entries"""
+        self._set_domain_key('xyz123', 'peterbecom')
         # first one
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': '/plog/something',
             'title': "This is a blog about something",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
         # second one
         r = self.post('/v1', {
-            'domain': 'peterbecom',
             'url': '/other/url',
             'title': "Another blog post about nothing",
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
         r = self.get('/v1?q=ab&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 2)
 
         r = self.delete('/v1', params={
-            'domain': 'peterbecom',
             'url': ' /plog/something   ',
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 204)
         r = self.get('/v1?q=ab&d=peterbecom')
         eq_(r.status_code, 200)
@@ -317,51 +336,24 @@ class E2E(unittest.TestCase):
 
     def test_search_with_groups(self):
         r = self.post('/v1', {
-            'domain': 'airmozilla',
             'url': '/page/public',
             'popularity': 10,
             'title': 'This is a PUBLIC page',
             'groups': '',
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         r = self.post('/v1', {
-            'domain': 'airmozilla',
             'url': '/page/private',
             'popularity': 20,
             'title': 'This is a PRIVATE page',
             'groups': 'private'
-        })
-        r = self.get('/v1?q=thi&d=airmozilla')
+        }, headers={'Auth-Key': 'xyz123'})
+        r = self.get('/v1?q=thi&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 1)
 
-        r = self.get('/v1?q=thi&d=airmozilla&g=private,public')
+        r = self.get('/v1?q=thi&d=peterbecom&g=private')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 2)
-
-    # def test_multiple_words(self):
-    #     # first a document that will contain both words
-    #     r = self.post('/v1', {
-    #         'domain': 'airmozilla',
-    #         'url': '/page/first',
-    #         'popularity': 100,
-    #         'title': 'First title here',
-    #     })
-    #     r = self.post('/v1', {
-    #         'domain': 'airmozilla',
-    #         'url': '/page/second',
-    #         'popularity': 100,
-    #         'title': 'Other title here',
-    #     })
-    #     r = self.get('/v1?q=first%20here&d=airmozilla')
-    #     eq_(r.status_code, 200)
-    #     eq_(len(r.json()['results']), 1)
-    #     eq_(r.json()['results'][0][0], '/page/first')
-    #
-    #     # now what about a search that matches on but has a
-    #     # "stray word" that doesn't match either
-    #     r = self.get('/v1?q=other%20word&d=airmozilla')
-    #     eq_(r.status_code, 200)
-    #     eq_(len(r.json()['results']), 0)
 
     def test_search_with_whole_words(self):
         """if you search for 'four thi' it should find 'Four things'
@@ -369,28 +361,25 @@ class E2E(unittest.TestCase):
         But should it really find 'fourier thinking'?
         """
         r = self.post('/v1', {
-            'domain': 'airmozilla',
             'url': '/page/first',
             'popularity': 1,
             'title': 'Four special things',
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         r = self.post('/v1', {
-            'domain': 'airmozilla',
             'url': '/page/second',
             'popularity': 2,
             'title': 'This is four items',
-        })
+        }, headers={'Auth-Key': 'xyz123'})
         r = self.post('/v1', {
-            'domain': 'airmozilla',
             'url': '/page/third',
             'popularity': 3,
             'title': 'Fourier thinking',
-        })
+        }, headers={'Auth-Key': 'xyz123'})
 
-        r = self.get('/v1?q=four&d=airmozilla')
+        r = self.get('/v1?q=four&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 3)
 
-        r = self.get('/v1?q=four%20thin&d=airmozilla')
+        r = self.get('/v1?q=four%20thin&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 1)

@@ -73,7 +73,6 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 type updateForm struct {
-	Domain     string
 	URL        string
 	Title      string
 	Groups     string
@@ -82,10 +81,6 @@ type updateForm struct {
 
 func (f *updateForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
-		&f.Domain: binding.Field{
-			Form:     "domain",
-			Required: true,
-		},
 		&f.URL: binding.Field{
 			Form:     "url",
 			Required: true,
@@ -100,13 +95,6 @@ func (f *updateForm) FieldMap() binding.FieldMap {
 }
 
 func (f updateForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
-	if strings.Trim(f.Domain, " ") == "" {
-		errs = append(errs, binding.Error{
-			FieldNames:     []string{"domain"},
-			Classification: "ComplaintError",
-			Message:        "Can't be empty",
-		})
-	}
 	if strings.Trim(f.Title, " ") == "" {
 		errs = append(errs, binding.Error{
 			FieldNames:     []string{"title"},
@@ -125,12 +113,18 @@ func (f updateForm) Validate(req *http.Request, errs binding.Errors) binding.Err
 }
 
 func updateHandler(w http.ResponseWriter, req *http.Request) {
+	key := req.Header.Get("AUTH-KEY")
+	if key == "" {
+		output := map[string]string{"error": "Auth-Key header not set"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
 	form := new(updateForm)
 	errs := binding.Bind(req, form)
 	if errs.Handle(w) {
 		return
 	}
-	form.Domain = strings.Trim(form.Domain, " ")
+	// form.Domain = strings.Trim(form.Domain, " ")
 	form.Title = strings.Trim(form.Title, " ")
 	form.URL = strings.Trim(form.URL, " ")
 	groups := []string{}
@@ -139,12 +133,20 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	sort.Strings(groups)
 
-	encoded := encodeString(form.Domain)
-	encodedURL := encodeString(form.URL)
-
 	c, err := redisPool.Get()
 	errHndlr(err)
 	defer redisPool.Put(c)
+
+	domain, err := authKeys.GetDomain(key, c)
+	if err != nil {
+		output := map[string]string{"error": "Auth-Key not recognized"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
+
+	encoded := encodeString(domain)
+	encodedURL := encodeString(form.URL)
+
 	pipedCommands := 0
 	for _, prefix := range getPrefixes(form.Title) {
 		if len(groups) == 0 {
@@ -172,17 +174,17 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 type deleteForm struct {
-	Domain string
-	URL    string
+	// Domain string
+	URL string
 }
 
 // FieldMap defines the bindings for deleteForm
 func (f *deleteForm) FieldMap() binding.FieldMap {
 	return binding.FieldMap{
-		&f.Domain: binding.Field{
-			Form:     "domain",
-			Required: true,
-		},
+		// &f.Domain: binding.Field{
+		// 	Form:     "domain",
+		// 	Required: true,
+		// },
 		&f.URL: binding.Field{
 			Form:     "url",
 			Required: true,
@@ -192,13 +194,13 @@ func (f *deleteForm) FieldMap() binding.FieldMap {
 
 // Validate checks the values for deleteForm
 func (f deleteForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
-	if strings.Trim(f.Domain, " ") == "" {
-		errs = append(errs, binding.Error{
-			FieldNames:     []string{"domain"},
-			Classification: "ComplaintError",
-			Message:        "Can't be empty",
-		})
-	}
+	// if strings.Trim(f.Domain, " ") == "" {
+	// 	errs = append(errs, binding.Error{
+	// 		FieldNames:     []string{"domain"},
+	// 		Classification: "ComplaintError",
+	// 		Message:        "Can't be empty",
+	// 	})
+	// }
 	if strings.Trim(f.URL, " ") == "" {
 		errs = append(errs, binding.Error{
 			FieldNames:     []string{"url"},
@@ -210,26 +212,36 @@ func (f deleteForm) Validate(req *http.Request, errs binding.Errors) binding.Err
 }
 
 func deleteHandler(w http.ResponseWriter, req *http.Request) {
+	key := req.Header.Get("AUTH-KEY")
+	if key == "" {
+		output := map[string]string{"error": "Auth-Key header not set"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
 	form := new(deleteForm)
 	errs := binding.Bind(req, form)
 	if errs.Handle(w) {
 		return
 	}
-	form.Domain = strings.Trim(form.Domain, " ")
+	// form.Domain = strings.Trim(form.Domain, " ")
 	form.URL = strings.Trim(form.URL, " ")
-
-	encoded := encodeString(form.Domain)
 
 	c, err := redisPool.Get()
 	errHndlr(err)
 	defer redisPool.CarefullyPut(c, &err)
 
+	domain, err := authKeys.GetDomain(key, c)
+	if err != nil {
+		output := map[string]string{"error": "Auth-Key not recognized"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
+
+	encoded := encodeString(domain)
 	encodedURL := encodeString(form.URL)
 	var title string
 	title, err = c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
-	if err != nil {
-		errHndlr(err)
-	}
+	errHndlr(err)
 	prefixes := getPrefixes(title)
 	pipedCommands := 0
 	for _, prefix := range prefixes {
@@ -319,7 +331,6 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
-	// fmt.Println(searchedTerms, terms)
 
 	c, err := redisPool.Get()
 	errHndlr(err)
@@ -404,9 +415,30 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	output := make(map[string]interface{})
 	output["terms"] = searchedTerms
 	output["results"] = rows
-	// fmt.Println(output)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	renderer.JSON(w, http.StatusOK, output)
+}
+
+type AuthKeys struct {
+	Domains map[string]string
+}
+
+func (ak *AuthKeys) Init() {
+	ak.Domains = make(map[string]string)
+}
+func (ak *AuthKeys) GetDomain(key string, conn *redis.Client) (string, error) {
+	if domain, ok := ak.Domains[key]; ok {
+		return domain, nil
+	} else {
+		domain, err := conn.Cmd("HGET", "$domainkeys", key).Str()
+		if err != nil {
+			return "", err
+		}
+		// now cache the value
+		// perhaps we should remember this with a timestamp
+		ak.Domains[key] = domain
+		return domain, nil
+	}
 }
 
 var (
@@ -415,6 +447,7 @@ var (
 	debug     = true
 	renderer  = render.New()
 	redisURL  = "127.0.0.1:6379"
+	authKeys  *AuthKeys
 )
 
 func main() {
@@ -476,6 +509,9 @@ func main() {
 	var err error
 	redisPool, err = pool.NewCustomPool("tcp", redisURL, redisPoolSize, df)
 	errHndlr(err)
+
+	authKeys = new(AuthKeys)
+	authKeys.Init()
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", indexHandler).Methods("GET", "HEAD")
