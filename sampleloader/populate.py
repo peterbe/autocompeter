@@ -23,6 +23,7 @@ def populate(database, destination, domain, flush=False):
     c = redis.StrictRedis(host='localhost', port=6379, db=database)
     if flush:
         c.flushdb()
+    print "KEY", key
     c.hset('$domainkeys', key, domain)
 
     for title, url, popularity in get_blogposts():
