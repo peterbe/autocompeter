@@ -74,6 +74,7 @@
       url: 'http://autocompeter.com/v1',
       domain: domain,
     }, options || {});
+    options.domain = options.domain || location.host;
     options.url += options.url.indexOf('?') > -1 ? '&' : '?';
     if (options.number) {
       options.url += 'n=' + options.number + '&';
@@ -195,8 +196,6 @@
       } else {
         hint.value = q.value;
       }
-      console.log('hint.value', hint.value);
-
     }
 
     function findParentForm(element) {
