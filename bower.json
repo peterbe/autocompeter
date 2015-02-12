@@ -1,0 +1,28 @@
+{
+  "name": "autocompeter",
+  "version": "0.1.0",
+  "homepage": "http://autocompeter.com",
+  "authors": [
+    "Peter Bengtsson <mail@peterbe.com>"
+  ],
+  "description": "A really fast AJAX autocomplete service and widget",
+  "main": [
+    "public/dist/autocompeter-v1.min.js",
+    "public/dist/autocompeter-v1.min.css"
+  ],
+  "moduleType": [
+    "globals"
+  ],
+  "keywords": [
+    "autocomplete",
+    "livesearc"
+  ],
+  "license": "BSD",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
