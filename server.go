@@ -16,7 +16,9 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 )
 
 var junkRegex = regexp.MustCompile(`[\[\](){}"?!,-:;,']`)
@@ -124,7 +126,6 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	if errs.Handle(w) {
 		return
 	}
-	// form.Domain = strings.Trim(form.Domain, " ")
 	form.Title = strings.Trim(form.Title, " ")
 	form.URL = strings.Trim(form.URL, " ")
 	groups := []string{}
@@ -146,6 +147,12 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 
 	encoded := encodeString(domain)
 	encodedURL := encodeString(form.URL)
+
+	title, _ := c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
+	if title == "" {
+		err = c.Cmd("HINCRBY", "$domaindocuments", domain, 1).Err
+		errHndlr(err)
+	}
 
 	pipedCommands := 0
 	for _, prefix := range getPrefixes(form.Title) {
@@ -242,6 +249,11 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	var title string
 	title, err = c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
 	errHndlr(err)
+	if title != "" {
+		err = c.Cmd("HINCRBY", "$domaindocuments", domain, -1).Err
+		errHndlr(err)
+	}
+
 	prefixes := getPrefixes(title)
 	pipedCommands := 0
 	for _, prefix := range prefixes {
@@ -336,6 +348,11 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	errHndlr(err)
 	defer redisPool.CarefullyPut(c, &err)
 
+	now := time.Now()
+	thisMonthFetchesKey := fmt.Sprintf("$domainfetches$%v$%v", now.Year(), int(now.Month()))
+	err = c.Cmd("HINCRBY", thisMonthFetchesKey, form.Domain, 1).Err
+	errHndlr(err)
+
 	getReplies := func(terms []string, group string) ([]string, error) {
 		encodedTerms := make([]string, len(terms))
 		encodedGroup := ""
@@ -419,6 +436,63 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	renderer.JSON(w, http.StatusOK, output)
 }
 
+func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
+	key := req.Header.Get("AUTH-KEY")
+	if key == "" {
+		output := map[string]string{"error": "Auth-Key header not set"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
+
+	c, err := redisPool.Get()
+	errHndlr(err)
+	defer redisPool.Put(c)
+
+	domain, err := authKeys.GetDomain(key, c)
+	if err != nil {
+		output := map[string]string{"error": "Auth-Key not recognized"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
+
+	documents := 0
+	documentsStr, err := c.Cmd("HGET", "$domaindocuments", domain).Str()
+	if documentsStr != "" {
+		documents, err = strconv.Atoi(documentsStr)
+		errHndlr(err)
+	}
+
+	now := time.Now()
+	var dt time.Time
+	allFetches := make(map[string]interface{})
+	var fetchKey string
+	var fetchesStr string
+	var fetches int
+	// starting on the year 2015 because that's when it all started
+	for y := 2015; y <= now.Year(); y++ {
+		thisYearFetches := make(map[string]int)
+		for m := 1; m <= 12; m++ {
+			dt = time.Date(y, time.Month(m), 1, 0, 0, 0, 0, time.UTC)
+			if dt.Before(now) {
+				fetchKey = fmt.Sprintf("$domainfetches$%v$%v", dt.Year(), int(dt.Month()))
+				fetchesStr, err = c.Cmd("HGET", fetchKey, domain).Str()
+				if err == nil {
+					fetches, err = strconv.Atoi(fetchesStr)
+					errHndlr(err)
+					thisYearFetches[fmt.Sprintf("%v", m)] = fetches
+				}
+			}
+		}
+		allFetches[fmt.Sprintf("%v", y)] = thisYearFetches
+	}
+	output := make(map[string]interface{})
+	output["fetches"] = allFetches
+	output["documents"] = documents
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	renderer.JSON(w, http.StatusOK, output)
+
+}
+
 var (
 	redisPool *pool.Pool
 	procs     int
@@ -496,6 +570,7 @@ func main() {
 	mux.HandleFunc("/v1", fetchHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", updateHandler).Methods("POST", "PUT")
 	mux.HandleFunc("/v1", deleteHandler).Methods("DELETE")
+	mux.HandleFunc("/v1/stats", privateStatsHandler).Methods("GET")
 
 	n := negroni.Classic()
 

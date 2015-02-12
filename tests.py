@@ -5,6 +5,7 @@ These tests expect to be able to talk to the running server on
 localhost:8000.
 """
 
+import datetime
 import unittest
 
 from nose.tools import ok_, eq_
@@ -383,3 +384,82 @@ class E2E(unittest.TestCase):
         r = self.get('/v1?q=four%20thin&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 1)
+
+    def test_domain_counter_increments(self):
+        r = self.post('/v1', {
+            'url': ' /plog/something   ',
+            'popularity': "12",
+            'title': "This is a blog about something",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+
+        r = self.get('/v1?q=b&d=peterbecom')
+        assert r.json()['results']
+        now = datetime.datetime.utcnow()
+        year_key = '$domainfetches$%s' % now.year
+        month_key = year_key + '$%s' % now.month
+        eq_(int(self.c.hget(month_key, 'peterbecom')), 1)
+
+        r = self.get('/v1?q=bl&d=peterbecom')
+        assert r.json()['results']
+        eq_(int(self.c.hget(month_key, 'peterbecom')), 2)
+
+    def test_get_stats(self):
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        now = datetime.datetime.utcnow()
+        eq_(stats['fetches'], {str(now.year): {}})
+        eq_(stats['documents'], 0)
+
+        r = self.post('/v1', {
+            'url': ' /plog/something   ',
+            'popularity': "12",
+            'title': "This is a blog about something",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+        r = self.get('/v1?q=b&d=peterbecom')
+        assert r.json()['results']
+        r = self.get('/v1?q=bl&d=peterbecom')
+        assert r.json()['results']
+
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        now = datetime.datetime.utcnow()
+        eq_(stats['fetches'][str(now.year)][str(now.month)], 2)
+        eq_(stats['documents'], 1)
+
+        # do an edit. different title same url
+        r = self.post('/v1', {
+            'url': '/plog/something',
+            'popularity': "13",
+            'title': "This is a blog about something extra",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        eq_(stats['documents'], 1)
+
+        # new document
+        r = self.post('/v1', {
+            'url': '/plog/different',
+            'popularity': "99",
+            'title': "Something different",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        eq_(stats['documents'], 2)
+
+        # remove that last one
+        r = self.delete('/v1', params={
+            'url': '/plog/different',
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 204)
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        eq_(stats['documents'], 1)
