@@ -15,8 +15,11 @@ To run the unit tests run:
 
 To run the end-to-end test run:
 
-    nosetests 
+    nosetests
 
+To run the python end-to-end tests you need to install some dependencies:
+
+    pip install -r requirements.txt
 
 Database structure
 ------------------
