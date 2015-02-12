@@ -16,7 +16,14 @@ def get_blogposts():
     items = json.load(open(os.path.join(_here, 'blogposts.json')))['items']
     for i, item in enumerate(items):
         url = 'http://www.peterbe.com/plog/%s' % item['slug']
-        yield (item['title'], url, len(items) - i)
+        yield (item['title'], url, len(items) - i, None)
+
+def get_events():
+    items = json.load(open(os.path.join(_here, 'airmoevents.json')))['items']
+    for i, item in enumerate(items):
+        group = item['group']
+        group = group != 'public' and group or ''
+        yield (item['title'], item['url'], item['popularity'], group)
 
 
 def populate(database, destination, domain, flush=False):
@@ -24,22 +31,26 @@ def populate(database, destination, domain, flush=False):
     if flush:
         c.flushdb()
     print "KEY", key
+    print "DOMAIN", domain
     c.hset('$domainkeys', key, domain)
 
-    for title, url, popularity in get_blogposts():
+    #items = get_blogposts()
+    items = get_events()
+    for title, url, popularity, group in items:
         _url = destination + '/v1'
         data = {
             'title': title,
             'url': url,
             'popularity': popularity,
+            'group': group,
         }
-        print (url, title, popularity)
+        #print (url, title, popularity, group)
         r = requests.post(
             _url,
             data=data,
             headers={'Auth-Key': key}
         )
-        print r.status_code
+        #print r.status_code
         assert r.status_code == 201, r.status_code
 
 

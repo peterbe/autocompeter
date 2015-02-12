@@ -51,7 +51,7 @@ class E2E(unittest.TestCase):
             'url': ' /plog/something   ',
             'popularity': "1.2.x",
             'title': "This is a blog about something",
-            "groups": "private,public",
+            "group": "public",
         }, headers={'Auth-Key': 'xyz123'})
         ok_(r.status_code >= 400 and r.status_code < 500)
 
@@ -339,15 +339,25 @@ class E2E(unittest.TestCase):
         r = self.post('/v1', {
             'url': '/page/public',
             'popularity': 10,
-            'title': 'This is a PUBLIC page',
-            'groups': '',
+            'title': 'This is a PUBLIC sample',
+            'group': '',
         }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
         r = self.post('/v1', {
             'url': '/page/private',
             'popularity': 20,
             'title': 'This is a PRIVATE page',
-            'groups': 'private'
+            'group': 'private'
         }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+        r = self.post('/v1', {
+            'url': '/page/semi',
+            'popularity': 20,
+            'title': 'This is a SEMI private sample',
+            'group': 'semi-private'
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+
         r = self.get('/v1?q=thi&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 1)
@@ -355,6 +365,14 @@ class E2E(unittest.TestCase):
         r = self.get('/v1?q=thi&d=peterbecom&g=private')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 2)
+
+        r = self.get('/v1?q=samp&d=peterbecom&g=semi-private')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 2)
+
+        r = self.get('/v1?q=thi&d=peterbecom&g=private,semi-private')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 3)
 
     def test_search_with_whole_words(self):
         """if you search for 'four thi' it should find 'Four things'

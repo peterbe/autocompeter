@@ -77,7 +77,7 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 type updateForm struct {
 	URL        string
 	Title      string
-	Groups     string
+	Group      string
 	Popularity float64
 }
 
@@ -91,7 +91,7 @@ func (f *updateForm) FieldMap() binding.FieldMap {
 			Form:     "title",
 			Required: true,
 		},
-		&f.Groups:     "groups",
+		&f.Group:      "group",
 		&f.Popularity: "popularity",
 	}
 }
@@ -128,11 +128,12 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	form.Title = strings.Trim(form.Title, " ")
 	form.URL = strings.Trim(form.URL, " ")
-	groups := []string{}
-	if len(form.Groups) != 0 {
-		groups = append(groups, strings.Split(form.Groups, ",")...)
-	}
-	sort.Strings(groups)
+	group := form.Group
+
+	// if len(form.Group) != 0 {
+	// 	groups = append(groups, strings.Split(form.Groups, ",")...)
+	// }
+	// sort.Strings(groups)
 
 	c, err := redisPool.Get()
 	errHndlr(err)
@@ -156,15 +157,14 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 
 	pipedCommands := 0
 	for _, prefix := range getPrefixes(form.Title) {
-		if len(groups) == 0 {
-			c.Append("ZADD", encoded+prefix, form.Popularity, encodedURL)
-			pipedCommands++
-		}
-		for _, group := range groups {
+		if group != "" {
+
 			encodedGroup := encodeString(group)
 			c.Append("ZADD", encoded+encodedGroup+prefix, form.Popularity, encodedURL)
-			pipedCommands++
+		} else {
+			c.Append("ZADD", encoded+prefix, form.Popularity, encodedURL)
 		}
+		pipedCommands++
 	}
 	c.Append("HSET", encoded+"$titles", encodedURL, form.Title)
 	pipedCommands++

@@ -28,7 +28,7 @@
  *
  * Load this file and then call it like this:
  *
- *     Autocomplete(document.getElementById('searchthing'), 'example.com');
+ *     Autocomplete(document.getElementById('searchthing'));
  *
  * More to come...
  */
@@ -68,16 +68,23 @@
     return target;
   }
 
-  function setUp(q, domain, options) {
+  function setUp(q, options) {
     options = options || {};
     options = extend({
       url: 'http://autocompeter.com/v1',
-      domain: domain,
+      domain: location.host,
+      groups: null,
     }, options || {});
-    options.domain = options.domain || location.host;
+
     options.url += options.url.indexOf('?') > -1 ? '&' : '?';
     if (options.number) {
       options.url += 'n=' + options.number + '&';
+    }
+    if (options.groups) {
+      if (Array.isArray(options.groups)) {
+        options.groups = options.groups.join(',');
+      }
+      options.url += 'g=' + encodeURIComponent(options.groups) + '&';
     }
     options.url += 'd=' + options.domain + '&q=';
 
