@@ -1,6 +1,6 @@
 {
   "name": "autocompeter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "http://autocompeter.com",
   "authors": [
     "Peter Bengtsson <mail@peterbe.com>"
@@ -10,19 +10,24 @@
     "public/dist/autocompeter-v1.min.js",
     "public/dist/autocompeter-v1.min.css"
   ],
-  "moduleType": [
-    "globals"
-  ],
   "keywords": [
     "autocomplete",
-    "livesearc"
+    "livesearch"
   ],
   "license": "BSD",
   "ignore": [
     "**/.*",
     "node_modules",
     "bower_components",
-    "test",
-    "tests"
+    "sampleloader",
+    ".gitignore",
+    "LICENSE",
+    ".travis.yml",
+    "requirements.txt",
+    "gulpfile.js",
+    "*.go",
+    "templates",
+    "src",
+    "*.py"
   ]
 }
