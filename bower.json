@@ -1,6 +1,6 @@
 {
   "name": "autocompeter",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "homepage": "http://autocompeter.com",
   "authors": [
     "Peter Bengtsson <mail@peterbe.com>"
@@ -20,11 +20,18 @@
     "node_modules",
     "bower_components",
     "sampleloader",
+    "public/README.md",
+    "public/js",
+    "public/css",
+    "public/img",
+    "public/fonts",
+    "public/font-awesome",
     ".gitignore",
     "LICENSE",
     ".travis.yml",
     "requirements.txt",
     "gulpfile.js",
+    "package.json",
     "*.go",
     "templates",
     "src",
