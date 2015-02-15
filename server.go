@@ -71,7 +71,7 @@ func errHndlr(err error) {
 
 func indexHandler(w http.ResponseWriter, req *http.Request) {
 	// this assumes there's a `templates/index.tmpl` file
-	renderer.HTML(w, http.StatusOK, "index", nil)
+	renderer.HTML(w, http.StatusOK, "index", map[string]string{"staticPrefix": staticPrefix})
 }
 
 type updateForm struct {
@@ -494,12 +494,13 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 var (
-	redisPool *pool.Pool
-	procs     int
-	debug     = true
-	renderer  = render.New()
-	redisURL  = "127.0.0.1:6379"
-	authKeys  *AuthKeys
+	redisPool    *pool.Pool
+	procs        int
+	debug        = true
+	renderer     = render.New()
+	redisURL     = "127.0.0.1:6379"
+	authKeys     *AuthKeys
+	staticPrefix = ""
 )
 
 func main() {
@@ -514,12 +515,16 @@ func main() {
 	flag.StringVar(
 		&redisURL, "redisURL", redisURL,
 		"Redis URL to tcp connect to")
+	flag.StringVar(
+		&staticPrefix, "staticPrefix", staticPrefix,
+		"Prefix in front of static assets in HTML")
 	flag.IntVar(&redisDatabase, "redisDatabase", redisDatabase,
 		"Redis database number to connect to")
 	flag.Parse()
 
 	fmt.Println("REDIS DATABASE:", redisDatabase)
 	fmt.Println("DEBUG MODE:", debug)
+	fmt.Println("STATIC PREFIX:", staticPrefix)
 
 	if !debug {
 		redisPoolSize = 100

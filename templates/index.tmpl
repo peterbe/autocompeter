@@ -12,10 +12,10 @@
     <title>Autocompeter - A really fast AJAX autocomplete service and widget</title>
 
     <!-- Bootstrap Core CSS -->
-    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{.staticPrefix}}/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom CSS -->
-    <link href="/css/landing-page.css" rel="stylesheet">
+    <link href="{{.staticPrefix}}/css/landing-page.css" rel="stylesheet">
 
     <!-- Custom Fonts -->
     <!-- <link href="/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
@@ -28,7 +28,7 @@
         <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 
-    <link href="/dist/autocompeter-v1.min.css" rel="stylesheet">
+    <link href="{{.staticPrefix}}/dist/autocompeter-v1.min.css" rel="stylesheet">
 
     <!-- now let's undo some CSS we are forced upon by bootstrap and landing-page.css -->
     <style>
@@ -97,7 +97,7 @@
                         <hr class="intro-divider">
 
 <input type="text" name="q" class="form-control" placeholder="Type something">
-<script src="/dist/autocompeter-v1.min.js"></script>
+<script src="{{.staticPrefix}}/dist/autocompeter-v1.min.js"></script>
 <script>
 Autocompeter(
   document.querySelector('input[name="q"]')
@@ -312,10 +312,10 @@ Autocompeter(
     </footer>
 
     <!-- jQuery -->
-    <script src="js/jquery.js"></script>
+    <script src="{{.staticPrefix}}/js/jquery.js"></script>
 
     <!-- Bootstrap Core JavaScript -->
-    <script src="js/bootstrap.min.js"></script>
+    <script src="{{.staticPrefix}}/js/bootstrap.min.js"></script>
     <!-- specific to just this page -->
     <script>
     $('pre').eq(1).text($('link').eq(3)[0].outerHTML);
