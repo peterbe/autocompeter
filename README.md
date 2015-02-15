@@ -98,3 +98,22 @@ Now we can reverse every ZADD that was done without knowing the popularity.
 This you do with a `ZREM` and simply knowing every prefix and its encoded URL.
 
 Once we've removed each prefix, we can remove the title by that encoded URL.
+
+
+Writing documentation
+---------------------
+
+If you want to work on the documentation, cd into the directory `./doc`
+and make sure you have `mkdocs` pip installed. (see
+`./requirements.txt`).
+
+Then simple run:
+
+    mkdocs build
+    open site/index.html
+
+If you have a bunch of changes you want to make and don't want to run
+`mkdocs build` every time you can use this trick:
+
+    mkdocs serve
+    open http://localhost:8000/

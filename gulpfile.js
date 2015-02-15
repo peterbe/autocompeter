@@ -29,7 +29,7 @@ gulp.task('sass', function() {
 // Concatenate & Minify JS
 gulp.task('scripts', function() {
     return gulp.src('src/*.js')
-        .pipe(concat('all.js'))
+        .pipe(concat('autocompeter-v1.js'))
         .pipe(gulp.dest('public/dist'))
         .pipe(rename('autocompeter-v1.min.js'))
         .pipe(uglify())
