@@ -70,8 +70,12 @@ func errHndlr(err error) {
 }
 
 func indexHandler(w http.ResponseWriter, req *http.Request) {
+	context := map[string]interface{}{
+		"staticPrefix": staticPrefix,
+		"isNotDebug":   !debug,
+	}
 	// this assumes there's a `templates/index.tmpl` file
-	renderer.HTML(w, http.StatusOK, "index", map[string]string{"staticPrefix": staticPrefix})
+	renderer.HTML(w, http.StatusOK, "index", context)
 }
 
 type updateForm struct {
