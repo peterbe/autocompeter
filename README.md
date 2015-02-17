@@ -3,6 +3,11 @@ A Go autocomplete Redis server.
 
 [![Build Status](https://travis-ci.org/peterbe/autocompeter.svg?branch=master)](https://travis-ci.org/peterbe/autocompeter)
 
+Documentation
+-------------
+
+[Documentation on Read the Docs](http://autocompeter.readthedocs.org)
+
 Running tests
 -------------
 
