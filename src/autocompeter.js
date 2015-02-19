@@ -71,7 +71,7 @@
   function setUp(q, options) {
     options = options || {};
     options = extend({
-      url: 'http://autocompeter.com/v1',
+      url: 'https://autocompeter.com/v1',
       domain: location.host,
       groups: null,
     }, options || {});
