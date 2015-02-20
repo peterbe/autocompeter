@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/md5"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"github.com/codegangsta/negroni"
 	"github.com/fiam/gounidecode/unidecode"
@@ -43,7 +43,7 @@ func cleanWords(query string) ([]string, bool) {
 func encodeString(str string) string {
 	h := md5.New()
 	h.Write([]byte(str))
-	return hex.EncodeToString(h.Sum(nil))[0:8]
+	return base64.URLEncoding.EncodeToString(h.Sum(nil))[0:6]
 }
 
 func getPrefixes(title string) []string {
@@ -162,7 +162,6 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	pipedCommands := 0
 	for _, prefix := range getPrefixes(form.Title) {
 		if group != "" {
-
 			encodedGroup := encodeString(group)
 			c.Append("ZADD", encoded+encodedGroup+prefix, form.Popularity, encodedURL)
 		} else {

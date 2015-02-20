@@ -29,10 +29,10 @@ To run the python end-to-end tests you need to install some dependencies:
 Database structure
 ------------------
 
-First we take the domain and hash it into a unique 8 character string.
+First we take the domain and hash it into a unique 6 character string.
 Let's call this `E`.
 
-Secondly we take the URL and hash it into a unique 8 character string too.
+Secondly we take the URL and hash it into a unique 6 character string too.
 Let's call this `U`. The un-encoded URL we'll called `URL`.
 
 The popularity is a floating point number. Let's call it `P`.

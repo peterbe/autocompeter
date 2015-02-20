@@ -208,7 +208,8 @@ func TestCleanWordsUnidecoded(t *testing.T) {
 
 func TestEncodeString(t *testing.T) {
 	got := encodeString("www.peterbe.com")
-	expect := "eb9f7473" // first 8 characters
+	// first 6 characters of that domain base64 encoded of its md5 checksum
+	expect := "6590cz"
 	assert.Equal(t, got, expect)
 }
 
