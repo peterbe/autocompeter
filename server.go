@@ -134,17 +134,12 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	form.URL = strings.Trim(form.URL, " ")
 	group := form.Group
 
-	// if len(form.Group) != 0 {
-	// 	groups = append(groups, strings.Split(form.Groups, ",")...)
-	// }
-	// sort.Strings(groups)
-
 	c, err := redisPool.Get()
 	errHndlr(err)
 	defer redisPool.Put(c)
 
-	domain, err := authKeys.GetDomain(key, c)
-	if err != nil {
+	domain, err := GetDomain(key, c)
+	if domain == "" {
 		output := map[string]string{"error": "Auth-Key not recognized"}
 		renderer.JSON(w, http.StatusForbidden, output)
 		return
@@ -240,8 +235,8 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	errHndlr(err)
 	defer redisPool.CarefullyPut(c, &err)
 
-	domain, err := authKeys.GetDomain(key, c)
-	if err != nil {
+	domain, err := GetDomain(key, c)
+	if domain == "" {
 		output := map[string]string{"error": "Auth-Key not recognized"}
 		renderer.JSON(w, http.StatusForbidden, output)
 		return
@@ -458,7 +453,7 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 	errHndlr(err)
 	defer redisPool.Put(c)
 
-	domain, err := authKeys.GetDomain(key, c)
+	domain, err := GetDomain(key, c)
 	if err != nil {
 		output := map[string]string{"error": "Auth-Key not recognized"}
 		renderer.JSON(w, http.StatusForbidden, output)
@@ -504,12 +499,12 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 var (
-	redisPool    *pool.Pool
-	procs        int
-	debug        = true
-	renderer     = render.New()
-	redisURL     = "127.0.0.1:6379"
-	authKeys     *AuthKeys
+	redisPool *pool.Pool
+	procs     int
+	debug     = true
+	renderer  = render.New()
+	redisURL  = "127.0.0.1:6379"
+	// authKeys     *AuthKeys
 	staticPrefix = ""
 )
 
@@ -577,8 +572,8 @@ func main() {
 	redisPool, err = pool.NewCustomPool("tcp", redisURL, redisPoolSize, df)
 	errHndlr(err)
 
-	authKeys = new(AuthKeys)
-	authKeys.Init()
+	// authKeys = new(AuthKeys)
+	// authKeys.Init()
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", indexHandler).Methods("GET", "HEAD")

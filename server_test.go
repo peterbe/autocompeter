@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"github.com/fzzy/radix/extra/pool"
 	"github.com/fzzy/radix/redis"
 	"github.com/stretchr/testify/assert"
@@ -20,9 +20,7 @@ type HandlerSuite struct {
 }
 
 func (suite *HandlerSuite) SetupTest() {
-	fmt.Println("In SetupTest()")
 	var err error
-	// var redis_url =
 	df := func(network, addr string) (*redis.Client, error) {
 		client, err := redis.Dial(network, addr)
 		// fmt.Println("DIaling")
@@ -43,14 +41,11 @@ func (suite *HandlerSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
-	authKeys = new(AuthKeys)
-	authKeys.Init()
 
 	c, err := redisPool.Get()
 	errHndlr(err)
 	defer redisPool.Put(c)
-	err = c.Cmd("HSET", "$domainkeys", "xyz1234567890", "peterbe.com").Err
-	errHndlr(err)
+	SetDomain("xyz1234567890", "peterbe.com", c)
 
 }
 
