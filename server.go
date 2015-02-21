@@ -159,6 +159,8 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 		if group != "" {
 			encodedGroup := encodeString(group)
 			c.Append("ZADD", encoded+encodedGroup+prefix, form.Popularity, encodedURL)
+			c.Append("HSET", encoded+"$groups", encodedURL, encodedGroup)
+			pipedCommands++
 		} else {
 			c.Append("ZADD", encoded+prefix, form.Popularity, encodedURL)
 		}
@@ -498,6 +500,85 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 
 }
 
+func flushHandler(w http.ResponseWriter, req *http.Request) {
+	key := req.Header.Get("AUTH-KEY")
+	if key == "" {
+		output := map[string]string{"error": "Auth-Key header not set"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
+
+	c, err := redisPool.Get()
+	errHndlr(err)
+	defer redisPool.Put(c)
+
+	domain, err := GetDomain(key, c)
+	if err != nil {
+		output := map[string]string{"error": "Auth-Key not recognized"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
+
+	encoded := encodeString(domain)
+
+	all, err := c.Cmd("HGETALL", encoded+"$titles").List()
+	errHndlr(err)
+	pipedCommands := 0
+	var encodedURL string
+	for i, each := range all {
+		if i%2 == 0 {
+			encodedURL = each
+		} else {
+			encodedGroup := ""
+			reply := c.Cmd("HGET", encoded+"$groups", encodedURL)
+			if reply.Type != redis.NilReply {
+				encodedGroup, err = reply.Str()
+				errHndlr(err)
+			}
+			prefixes := getPrefixes(each)
+			for _, prefix := range prefixes {
+				if encodedGroup != "" {
+					c.Append("ZREM", encoded+encodedGroup+prefix, encodedURL)
+				} else {
+					c.Append("ZREM", encoded+prefix, encodedURL)
+				}
+				pipedCommands++
+			}
+			c.Append("HDEL", encoded+"$titles", encodedURL)
+			pipedCommands++
+			c.Append("HDEL", encoded+"$urls", encodedURL)
+			pipedCommands++
+			if encodedGroup != "" {
+				c.Append("HDEL", encoded+"$groups", encodedURL)
+				pipedCommands++
+			}
+		}
+	}
+
+	now := time.Now()
+	// var dt time.Time
+	var fetchKey string
+	for y := 2015; y <= now.Year(); y++ {
+		for m := 1; m <= 12; m++ {
+			fetchKey = fmt.Sprintf("$domainfetches$%v$%v", y, m)
+			c.Append("HDEL", fetchKey, domain)
+			pipedCommands++
+		}
+	}
+
+	for i := 1; i <= pipedCommands; i++ {
+		if err := c.GetReply().Err; err != nil {
+			errHndlr(err)
+		}
+	}
+
+	err = c.Cmd("HSET", "$domaindocuments", domain, 0).Err
+	errHndlr(err)
+
+	output := map[string]string{"message": "OK"}
+	renderer.JSON(w, http.StatusNoContent, output)
+}
+
 var (
 	redisPool *pool.Pool
 	procs     int
@@ -581,6 +662,7 @@ func main() {
 	mux.HandleFunc("/v1", updateHandler).Methods("POST", "PUT")
 	mux.HandleFunc("/v1", deleteHandler).Methods("DELETE")
 	mux.HandleFunc("/v1/stats", privateStatsHandler).Methods("GET")
+	mux.HandleFunc("/v1/flush", flushHandler).Methods("DELETE")
 
 	n := negroni.Classic()
 

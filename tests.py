@@ -348,6 +348,45 @@ class E2E(unittest.TestCase):
             [u'/other/url', u'Another blog post about nothing']
         ])
 
+    def test_delete_domain(self):
+        self._set_domain_key('xyz123', 'peterbecom')
+        r = self.post('/v1', {
+            'url': '/plog/something',
+            'title': "blog something",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+        r = self.post('/v1', {
+            'url': '/plog/other',
+            'title': "Another blog",
+            'group': 'private'
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        eq_(stats['documents'], 2)
+
+        r = self.get('/v1?q=blog&d=peterbecom')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 1)
+        r = self.get('/v1?q=blog&d=peterbecom&g=private')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 2)
+
+        r = self.delete('/v1/flush')
+        eq_(r.status_code, 403)
+        r = self.delete('/v1/flush', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 204)
+        r = self.get('/v1?q=blo&d=peterbecom')
+        eq_(r.status_code, 200)
+        eq_(len(r.json()['results']), 0)
+
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        eq_(stats['documents'], 0)
+
     def test_search_with_groups(self):
         r = self.post('/v1', {
             'url': '/page/public',

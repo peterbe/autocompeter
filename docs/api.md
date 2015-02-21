@@ -125,3 +125,14 @@ Note that you can't use `application/x-www-form-urlencoded` with HTTP DELETE.
 So you have to put the `?url=...` into the URL.
 
 Note also that in this example the `url` is URL encoded. The `:` becomes `%3A`.
+
+## How to remove all your documents
+
+You can start over and flush all the documents you have sent it by doing
+a HTTP DELETE request to the url `/v1/flush`. Like this:
+
+    curl -X DELETE -H "Auth-Key: yoursecurekey" \
+    https://autocompeter.com/v1/flush
+
+This will reset the counts all related to your domain. The only thing that
+isn't removed is your auth key.    
