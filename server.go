@@ -250,7 +250,14 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	encoded := encodeString(domain)
 	encodedURL := encodeString(form.URL)
 	var title string
-	title, err = c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
+	reply := c.Cmd("HGET", encoded+"$titles", encodedURL)
+	if reply.Type == redis.NilReply {
+		output := map[string]string{"error": "URL not recognized"}
+		renderer.JSON(w, http.StatusNotFound, output)
+		return
+	}
+	title, err = reply.Str()
+
 	errHndlr(err)
 	if title != "" {
 		err = c.Cmd("HINCRBY", "$domaindocuments", domain, -1).Err

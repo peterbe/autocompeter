@@ -305,6 +305,19 @@ class E2E(unittest.TestCase):
         eq_(r.status_code, 200)
         ok_(not r.json()['results'])
 
+    def test_delete_invalid_url(self):
+        self._set_domain_key('xyz123', 'peterbecom')
+        r = self.post('/v1', {
+            'url': '/plog/something',
+            'title': "This is a blog about something",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+
+        r = self.delete('/v1', params={
+            'url': 'neverheardof',
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 404)
+
     def test_delete_row_carefully(self):
         """deleting one item, by URL, shouldn't affect other entries"""
         self._set_domain_key('xyz123', 'peterbecom')
