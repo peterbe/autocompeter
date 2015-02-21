@@ -230,7 +230,6 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	if errs.Handle(w) {
 		return
 	}
-	// form.Domain = strings.Trim(form.Domain, " ")
 	form.URL = strings.Trim(form.URL, " ")
 
 	c, err := redisPool.Get()
@@ -261,10 +260,22 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 		errHndlr(err)
 	}
 
+	reply = c.Cmd("HGET", encoded+"$groups", encodedURL)
+	encodedGroup := ""
+	if reply.Type != redis.NilReply {
+		encodedGroup, _ = reply.Str()
+	}
 	prefixes := getPrefixes(title)
 	pipedCommands := 0
 	for _, prefix := range prefixes {
-		c.Append("ZREM", encoded+prefix, encodedURL)
+		if encodedGroup != "" {
+			c.Append("ZREM", encoded+encodedGroup+prefix, encodedURL)
+			c.Append("HDEL", encoded+"$groups", encodedURL)
+			pipedCommands++
+		} else {
+			c.Append("ZREM", encoded+prefix, encodedURL)
+		}
+
 		pipedCommands++
 	}
 

@@ -305,6 +305,32 @@ class E2E(unittest.TestCase):
         eq_(r.status_code, 200)
         ok_(not r.json()['results'])
 
+    def test_delete_row_belonging_a_group(self):
+        self._set_domain_key('xyz123', 'peterbecom')
+        r = self.post('/v1', {
+            'url': '/plog/something',
+            'title': "This is a blog about something",
+            'group': 'private'
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+        r = self.get('/v1?q=ab&d=peterbecom')
+        eq_(r.status_code, 200)
+        ok_(not r.json()['results'])
+        r = self.get('/v1?q=ab&d=peterbecom&g=private')
+        eq_(r.status_code, 200)
+        ok_(r.json()['results'])
+
+        r = self.delete('/v1', params={
+            'url': ' /plog/something   ',
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 204)
+        r = self.get('/v1?q=ab&d=peterbecom')
+        eq_(r.status_code, 200)
+        ok_(not r.json()['results'])
+        r = self.get('/v1?q=ab&d=peterbecom&g=private')
+        eq_(r.status_code, 200)
+        ok_(not r.json()['results'])
+
     def test_delete_invalid_url(self):
         self._set_domain_key('xyz123', 'peterbecom')
         r = self.post('/v1', {
