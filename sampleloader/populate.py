@@ -90,7 +90,7 @@ def _in_bulk(destination, items):
 
 @click.command()
 @click.option('--database', '-d', default=8)
-@click.option('--destination', default='http://autocompeter.com')
+@click.option('--destination', default='https://autocompeter.com')
 @click.option('--domain', default='autocompeter.com')
 @click.option('--flush', default=False, is_flag=True)
 @click.option('--bulk', default=False, is_flag=True)
