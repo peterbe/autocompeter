@@ -37,8 +37,8 @@ def populate(database, destination, domain, flush=False, bulk=False):
     print "DOMAIN", domain
     c.hset('$domainkeys', key, domain)
 
-    #items = get_blogposts()
-    items = get_events()
+    items = get_blogposts()
+    #items = get_events()
     t0 = time.time()
     if bulk:
         _in_bulk(destination, items)
