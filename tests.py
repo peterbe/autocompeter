@@ -6,6 +6,7 @@ localhost:8000.
 """
 
 import datetime
+import json
 import unittest
 
 from nose.tools import ok_, eq_
@@ -559,3 +560,41 @@ class E2E(unittest.TestCase):
         eq_(r.status_code, 200)
         stats = r.json()
         eq_(stats['documents'], 1)
+
+    def test_bulk_upload(self):
+        documents = [
+            {
+                'url': '/some/page',
+                'title': 'Some title',
+                'popularity': 10
+            },
+            {
+                'url': '/other/page',
+                'title': 'Other title',
+            },
+            {
+                'url': '/private/page',
+                'title': 'Other private page',
+                'group': 'private'
+            },
+        ]
+        r = self.post(
+            '/v1/bulk',
+            data=json.dumps({'documents': documents}),
+            headers={
+                'Auth-Key': 'xyz123',
+                # 'content-type': 'application/json'
+            }
+        )
+        eq_(r.status_code, 201)
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        eq_(stats['documents'], 3)
+
+        r = self.get('/v1?q=titl&d=peterbecom')
+        eq_(len(r.json()['results']), 2)
+        urls = [x[0] for x in r.json()['results']]
+        eq_(urls, ['/some/page', '/other/page'])
+        r = self.get('/v1?q=other&d=peterbecom&g=private')
+        eq_(len(r.json()['results']), 2)

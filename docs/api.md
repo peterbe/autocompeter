@@ -135,4 +135,73 @@ a HTTP DELETE request to the url `/v1/flush`. Like this:
     https://autocompeter.com/v1/flush
 
 This will reset the counts all related to your domain. The only thing that
-isn't removed is your auth key.    
+isn't removed is your auth key.
+
+## Bulk upload
+
+Instead of submitting one "document" at a time you can instead send in a
+whole big JSON blob. The struct needs to be like this example:
+
+    {
+        "documents": [
+            {
+                "url": "http://example.com/page1",
+                "title": "Page One"
+            },
+            {
+                "url": "http://example.com/page2",
+                "title": "Other page",
+                "popularity": 123
+            },
+            {
+                "url": "http://example.com/page3",
+                "title": "Last page",
+                "group": "admins"
+            },
+        ]
+    }
+
+Note that the `popularity` and the `group` keys are optional. Each
+dictionary in the array called `documents` needs to have a `url` and `title`.
+
+The endpoint to use `https://autocompeter.com/v1/bulk` and you need to do a
+HTTP POST or a HTTP PUT.
+
+Here's an example using curl:
+
+    url -X POST -H "Auth-Key: 3b14d7c280bf525b779d0a01c601fe44" \
+    -d '{"documents": [{"url":"/url", "title":"My Title", "popularity":1001}]}' \
+    https://autocompeter.com/v1/bulk
+
+And here's an example using
+Python [requests](http://requests.readthedocs.org/en/latest/):
+
+
+```python
+import json
+import requests
+
+documents = [
+    {
+        'url': '/some/page',
+        'title': 'Some title',
+        'popularity': 10
+    },
+    {
+        'url': '/other/page',
+        'title': 'Other title',
+    },
+    {
+        'url': '/private/page',
+        'title': 'Other private page',
+        'group': 'private'
+    },
+]
+print requests.post(
+    'https://autocompeter.com/v1/bulk',
+    data=json.dumps({'documents': documents}),
+    headers={
+        'Auth-Key': '3b14d7c280bf525b779d0a01c601fe44',
+    }
+)
+```

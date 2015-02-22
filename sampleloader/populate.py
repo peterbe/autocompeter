@@ -3,6 +3,7 @@
 import os
 import json
 import hashlib
+import time
 
 import click
 import requests
@@ -28,7 +29,7 @@ def get_events():
         yield (item['title'], item['url'], item['popularity'], group)
 
 
-def populate(database, destination, domain, flush=False):
+def populate(database, destination, domain, flush=False, bulk=False):
     c = redis.StrictRedis(host='localhost', port=6379, db=database)
     if flush:
         c.flushdb()
@@ -38,6 +39,16 @@ def populate(database, destination, domain, flush=False):
 
     #items = get_blogposts()
     items = get_events()
+    t0 = time.time()
+    if bulk:
+        _in_bulk(destination, items)
+    else:
+        _one_at_a_time(destination, items)
+    t1 = time.time()
+    print "TOOK", t1 - t0
+
+
+def _one_at_a_time(destination, items):
     for title, url, popularity, group in items:
         _url = destination + '/v1'
         data = {
@@ -56,14 +67,42 @@ def populate(database, destination, domain, flush=False):
         assert r.status_code == 201, r.status_code
 
 
+def _in_bulk(destination, items):
+    data = {
+        'documents': [
+            dict(
+                title=t,
+                url=u,
+                popularity=p,
+                group=g
+            )
+            for t, u, p, g in items
+        ]
+    }
+    _url = destination + '/v1/bulk'
+    r = requests.post(
+        _url,
+        data=json.dumps(data),
+        headers={'Auth-Key': key}
+    )
+    assert r.status_code == 201, r.status_code
+
+
 @click.command()
 @click.option('--database', '-d', default=8)
 @click.option('--destination', default='http://autocompeter.com')
 @click.option('--domain', default='autocompeter.com')
 @click.option('--flush', default=False, is_flag=True)
-def run(database, destination, domain, flush=False):
+@click.option('--bulk', default=False, is_flag=True)
+def run(database, destination, domain, flush=False, bulk=False):
     #print (database, domain, flush)
-    populate(database, destination, domain, flush=flush)
+    populate(
+        database,
+        destination,
+        domain,
+        flush=flush,
+        bulk=bulk,
+    )
 
 if __name__ == '__main__':
     run()

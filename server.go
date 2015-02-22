@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/codegangsta/negroni"
 	"github.com/fiam/gounidecode/unidecode"
@@ -132,7 +133,7 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	form.Title = strings.Trim(form.Title, " ")
 	form.URL = strings.Trim(form.URL, " ")
-	group := form.Group
+	// group := form.Group
 
 	c, err := redisPool.Get()
 	errHndlr(err)
@@ -145,30 +146,44 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	encoded := encodeString(domain)
-	encodedURL := encodeString(form.URL)
+	insertDocument(
+		domain,
+		form.Title,
+		form.URL,
+		form.Group,
+		form.Popularity,
+		c,
+	)
 
-	title, _ := c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
-	if title == "" {
-		err = c.Cmd("HINCRBY", "$domaindocuments", domain, 1).Err
+	output := map[string]string{"message": "OK"}
+	renderer.JSON(w, http.StatusCreated, output)
+}
+
+func insertDocument(domain, title, url, group string, popularity float64, c *redis.Client) {
+	encoded := encodeString(domain)
+	encodedURL := encodeString(url)
+
+	existingTitle, _ := c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
+	if existingTitle == "" {
+		err := c.Cmd("HINCRBY", "$domaindocuments", domain, 1).Err
 		errHndlr(err)
 	}
 
 	pipedCommands := 0
-	for _, prefix := range getPrefixes(form.Title) {
+	for _, prefix := range getPrefixes(title) {
 		if group != "" {
 			encodedGroup := encodeString(group)
-			c.Append("ZADD", encoded+encodedGroup+prefix, form.Popularity, encodedURL)
+			c.Append("ZADD", encoded+encodedGroup+prefix, popularity, encodedURL)
 			c.Append("HSET", encoded+"$groups", encodedURL, encodedGroup)
 			pipedCommands++
 		} else {
-			c.Append("ZADD", encoded+prefix, form.Popularity, encodedURL)
+			c.Append("ZADD", encoded+prefix, popularity, encodedURL)
 		}
 		pipedCommands++
 	}
-	c.Append("HSET", encoded+"$titles", encodedURL, form.Title)
+	c.Append("HSET", encoded+"$titles", encodedURL, title)
 	pipedCommands++
-	c.Append("HSET", encoded+"$urls", encodedURL, form.URL)
+	c.Append("HSET", encoded+"$urls", encodedURL, url)
 	pipedCommands++
 	for i := 1; i <= pipedCommands; i++ {
 		if err := c.GetReply().Err; err != nil {
@@ -176,6 +191,54 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+}
+
+type bulkDocuments struct {
+	Documents []bulkDocument `json:"documents"`
+}
+
+type bulkDocument struct {
+	URL        string  `json:"url"`
+	Title      string  `json:"title"`
+	Popularity float64 `json:"popularity"`
+	Group      string  `json:"group"`
+}
+
+func bulkHandler(w http.ResponseWriter, req *http.Request) {
+	key := req.Header.Get("AUTH-KEY")
+	if key == "" {
+		output := map[string]string{"error": "Auth-Key header not set"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
+	c, err := redisPool.Get()
+	errHndlr(err)
+	defer redisPool.Put(c)
+
+	domain, err := GetDomain(key, c)
+	if domain == "" {
+		output := map[string]string{"error": "Auth-Key not recognized"}
+		renderer.JSON(w, http.StatusForbidden, output)
+		return
+	}
+
+	// encoded := encodeString(domain)
+
+	decoder := json.NewDecoder(req.Body)
+	var bs bulkDocuments
+	err = decoder.Decode(&bs)
+	errHndlr(err)
+	for _, b := range bs.Documents {
+		// fmt.Println(b.URL, b.Title, b.Popularity, b.Group)
+		insertDocument(
+			domain,
+			b.Title,
+			b.URL,
+			b.Group,
+			b.Popularity,
+			c,
+		)
+	}
 	output := map[string]string{"message": "OK"}
 	renderer.JSON(w, http.StatusCreated, output)
 }
@@ -674,6 +737,7 @@ func main() {
 	mux.HandleFunc("/v1", deleteHandler).Methods("DELETE")
 	mux.HandleFunc("/v1/stats", privateStatsHandler).Methods("GET")
 	mux.HandleFunc("/v1/flush", flushHandler).Methods("DELETE")
+	mux.HandleFunc("/v1/bulk", bulkHandler).Methods("POST", "PUT")
 
 	n := negroni.Classic()
 
