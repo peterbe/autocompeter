@@ -7,8 +7,8 @@
   ],
   "description": "A really fast AJAX autocomplete service and widget",
   "main": [
-    "public/dist/autocompeter-v1.min.js",
-    "public/dist/autocompeter-v1.min.css"
+    "public/dist/autocompeter.min.js",
+    "public/dist/autocompeter.min.css"
   ],
   "keywords": [
     "autocomplete",

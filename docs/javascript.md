@@ -6,10 +6,10 @@ You can either download the javascript code and put it into your own site
 or you can leave it to Autocompeter to host it on its CDN (backed by
 AWS CloudFront). To download, go to:
 
-[**https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter-v1.min.js**](https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter-v1.min.js)
+[**https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter.min.js**](https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter.min.js)
 
 This is the optimized version. If you want to, you can download [the
-non-minified file](https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter-v1.js) instead which is easier to debug or hack on.
+non-minified file](https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter.js) instead which is easier to debug or hack on.
 
 ## Bower
 
@@ -27,13 +27,13 @@ prefer them to be.
 
 To use our CDN the URL is:
 
-[http://cdn.autocompeter.com/dist/autocompeter-v1.min.js](http://cdn.autocompeter.com/dist/autocompeter-v1.min.js) (or [https version](https://cdn.autocompeter.com/dist/autocompeter-v1.min.js))
+[http://cdn.autocompeter.com/dist/autocompeter.min.js](http://cdn.autocompeter.com/dist/autocompeter.min.js) (or [https version](https://cdn.autocompeter.com/dist/autocompeter.min.js))
 
 But it's recommended that when you insert this URL into your site, instead
 of prefixing it with `http://` or `https://` prefix it with just `//`. E.g.
 like this:
 
-    <script src="//cdn.autocompeter.com/dist/autocompeter-v1.min.js"></script>
+    <script src="//cdn.autocompeter.com/dist/autocompeter.min.js"></script>
 
 ## Configure the Javascript
 

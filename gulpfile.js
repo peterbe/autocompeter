@@ -21,7 +21,7 @@ gulp.task('sass', function() {
     return gulp.src('src/*.scss')
         .pipe(sass())
         .pipe(gulp.dest('public/dist'))
-        .pipe(rename('autocompeter-v1.min.css'))
+        .pipe(rename('autocompeter.min.css'))
         .pipe(minifyCSS({keepBreaks:true}))
         .pipe(gulp.dest('public/dist'));
 });
@@ -29,9 +29,9 @@ gulp.task('sass', function() {
 // Concatenate & Minify JS
 gulp.task('scripts', function() {
     return gulp.src('src/*.js')
-        .pipe(concat('autocompeter-v1.js'))
+        .pipe(concat('autocompeter.js'))
         .pipe(gulp.dest('public/dist'))
-        .pipe(rename('autocompeter-v1.min.js'))
+        .pipe(rename('autocompeter.min.js'))
         .pipe(uglify())
         .pipe(gulp.dest('public/dist'));
 });

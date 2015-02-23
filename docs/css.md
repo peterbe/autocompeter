@@ -2,7 +2,7 @@
 
 Just like with [downloading the Javascript](javascript), you can do with the CSS.
 
-[**https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter-v1.min.css**](https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter-v1.min.css)
+[**https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter.min.css**](https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter.min.css)
 
 Or...
 
@@ -11,7 +11,7 @@ Or...
 
 Or...
 
-    <link rel="stylesheet" href="//cdn.autocompeter.com/dist/autocompeter-v1.min.css">
+    <link rel="stylesheet" href="//cdn.autocompeter.com/dist/autocompeter.min.css">
 
 There is also another alternative. If you already use [Sass (aka. SCSS)](http://sass-lang.com/)
 you can download [autocompeter.scss](https://github.com/peterbe/autocompeter/blob/master/src/autocompeter.scss)
@@ -24,7 +24,7 @@ you don't exactly like the way it looks or it just doesn't work as expected.
 The recommended way to deal with this is to override certain selectors. For
 example it might look like this:
 
-    <link rel="stylesheet" href="//cdn.autocompeter.com/dist/autocompeter-v1.min.css">
+    <link rel="stylesheet" href="//cdn.autocompeter.com/dist/autocompeter.min.css">
     <style>
     ._ac-wrap { width: 400px; }
     @media only screen and (max-width : 321px) {
