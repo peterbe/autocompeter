@@ -1,8 +1,3 @@
-# This indicates to Travis that we will not use or need sudo
-# so that we can benefit from and use the cache->directories
-# directive.
-sudo: no
-
 language: go
 
 go:
@@ -17,3 +12,8 @@ env:
 
 script:
 - go test -v ./...
+- ./travis-e2e.sh
+
+notifications:
+  email:
+    on_success: never
