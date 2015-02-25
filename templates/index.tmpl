@@ -97,10 +97,14 @@
                         <hr class="intro-divider">
 
 <input type="text" name="q" class="form-control" placeholder="Type something">
-<script src="{{.staticPrefix}}/dist/autocompeter.min.js"></script>
+<script src="/dist/autocompeter.min.js"></script>
 <script>
+// The url option overide here is optional, just done to make local development
+// easier.
 Autocompeter(
-  document.querySelector('input[name="q"]')
+  document.querySelector('input[name="q"]'), {
+    url: location.protocol + '//' + location.host + '/v1'
+  }
 );
 </script>
 
@@ -137,17 +141,31 @@ Autocompeter(
                     <p class="lead">
                       Submit your page information to <b><script>document.write(location.host)</script></b>
                       like this:
+                    </p>
                       <pre>curl -X POST -H "Auth-Key: yoursecurekey" \
  -d url=/some/url \
- -d title="Some Title" http://autocompeter.com/v1
-                      </pre>
+ -d title="Some Title" https://autocompeter.com/v1</pre>
+                    <p class="lead">
+                      Or by bulk as one big JSON blob:
+                    </p>
+                    <pre>curl -X POST -H "Auth-Key: yoursecurekey" \
+-d '{"documents": [{"url":"/some/url", "title":"Some Title", "popularity":100}]}' \
+https://autocompeter.com/v1/bulk</pre>
+                    <p>
+                      Check out <a href="http://autocompeter.readthedocs.org/en/latest/api/">
+                      the documentation on how to use the API</a>.
                     </p>
                 </div>
                 <div class="col-lg-5 col-lg-offset-2 col-sm-6">
                   <pre></pre>
                   <pre></pre>
                   <pre></pre>
-                  <pre></pre>
+                  <pre>
+&lt;script&gt;
+Autocompeter(
+  document.querySelector('input[name="q"]')
+);
+&lt;/script&gt;</pre>
                   <p class="lead">
                     How the demo on this page was set up.
                   </p>
@@ -232,7 +250,7 @@ Autocompeter(
                     <ul>
                       <li>Written in <a href="http://golang.org/">Go</a></li>
                       <li>Database is <a href="http://redis.io/">Redis</a></li>
-                      <li>All code is Open Source under a BSD License</li>
+                      <li><a href="https://github.com/peterbe/autocompeter">All code is Open Source under a BSD License</a></li>
 
                     </ul>
 
@@ -256,7 +274,10 @@ Autocompeter(
                     <div class="clearfix"></div>
                     <h2 class="section-heading">Documentation</h2>
                     <p class="lead">
-                    Under Construction. Watch this space.
+                    Detailed documentation available on
+                    <a href="https://autocompeter.readthedocs.org/en/latest/">
+                      https://autocompeter.readthedocs.org
+                    </a>
                     </p>
                 </div>
                 <div class="col-lg-5 col-lg-offset-2 col-sm-6">
@@ -319,10 +340,10 @@ Autocompeter(
     <script src="{{.staticPrefix}}/js/bootstrap.min.js"></script>
     <!-- specific to just this page -->
     <script>
-    $('pre').eq(1).text($('link').eq(3)[0].outerHTML);
-    $('pre').eq(2).text('<input type="text" name="q" placeholder="Type something">');
-    $('pre').eq(3).text($('script').eq(0)[0].outerHTML);
-    $('pre').eq(4).text($('script').eq(1)[0].outerHTML);
+    $('pre').eq(2).text($('link').eq(3)[0].outerHTML);
+    $('pre').eq(3).text('<input type="text" name="q" placeholder="Type something">');
+    $('pre').eq(4).text($('script').eq(0)[0].outerHTML);
+    // $('pre').eq(4).text($('script').eq(1)[0].outerHTML);
     </script>
     {{if .isNotDebug}}
     <script>
