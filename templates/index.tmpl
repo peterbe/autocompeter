@@ -73,6 +73,11 @@
                     <li>
                         <a href="#docs">Documentation</a>
                     </li>
+                    {{if .Username}}
+                    <li>
+                        <a href="#auth">Authenticated</a>
+                    </li>
+                    {{end}}
                 </ul>
             </div>
             <!-- /.navbar-collapse -->
@@ -293,6 +298,74 @@ Autocompeter(
     </div>
     <!-- /.content-section-b -->
 
+    <a name="auth"></a>
+    <div class="content-section-a">
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Login/Signup</h2>
+                    <p class="lead">
+                      {{if .Username}}
+                      You are logged in as <code>{{.Username}}</code><br>
+                      <a href="/logout">Log out</a>
+                      {{else}}
+                      <a href="/login">
+                        Use your GitHub account to authenticate so you can
+                        manage your Auth-Key.
+                      </a>
+                      {{end}}
+                    </p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                  {{if .Username}}
+                  <p class="lead">
+                    Here are the Auth-Keys you have generated:
+                  </p>
+
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Domain</th>
+                        <th>Key</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{range $row := .domains}}
+                      <tr>
+                        <td><code>{{$row.Domain}}</code></td>
+                        <td><code>{{$row.Key}}</code></td>
+                        <td>
+                          <form action="/domainkeys/delete" method="post">
+                            <!-- NEEDS CSRF protection -->
+                            <input type="hidden" name="key" value="{{$row.Key}}">
+                            <button class="delete-key btn btn-default btn-xs">Delete</button>
+                          </form>
+                        </td>
+                      </tr>
+                    {{end}}
+                    </tbody>
+                  </table>
+
+                  <form action="/domainkeys/new" method="post">
+                    <div class="form-group">
+                      <!-- <label for="id_domain">Domain</label> -->
+                      <input type="text" name="domain" class="form-control" id="id_domain" placeholder="e.g. autocompeter.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Generate new key</button>
+                  </form>
+                  {{end}}
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+
     <!-- Footer -->
     <footer>
         <div class="container">
@@ -314,6 +387,12 @@ Autocompeter(
                         <li>
                             <a href="#docs">Documentation</a>
                         </li>
+                        {{if .Username}}
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#auth">Authenticated</a>
+                        </li>
+                        {{end}}
                     </ul>
                     <p class="copyright text-muted small">
                       Copyright &copy; <a href="http://www.peterbe.com">Peter Bengtsson</a> 2015.

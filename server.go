@@ -9,10 +9,14 @@ import (
 	"github.com/fiam/gounidecode/unidecode"
 	"github.com/fzzy/radix/extra/pool"
 	"github.com/fzzy/radix/redis"
+	"github.com/google/go-github/github"
 	"github.com/gorilla/mux"
 	"github.com/mholt/binding"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
+	"golang.org/x/oauth2"
+	githuboauth "golang.org/x/oauth2/github"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"runtime"
@@ -70,10 +74,54 @@ func errHndlr(err error) {
 	}
 }
 
+func isOnHTTPS(req *http.Request) bool {
+	if req.Header.Get("is-secure") == "true" {
+		return true
+	}
+	// default is to use the flag
+	// which is only really useful for local development
+	return usingHTTPS
+}
+
+type domainRow struct {
+	Key    string
+	Domain string
+}
+
 func indexHandler(w http.ResponseWriter, req *http.Request) {
 	context := map[string]interface{}{
 		"staticPrefix": staticPrefix,
 		"isNotDebug":   !debug,
+		"Username":     "",
+		"domains":      make([]string, 0),
+	}
+
+	cookie, err := req.Cookie("username")
+	if err == nil {
+		context["Username"] = cookie.Value
+		c, err := redisPool.Get()
+		errHndlr(err)
+		defer redisPool.CarefullyPut(c, &err)
+
+		userdomainsKey := fmt.Sprintf("$userdomains$%v", cookie.Value)
+		replies, err := c.Cmd("SMEMBERS", userdomainsKey).List()
+		errHndlr(err)
+
+		domains := make([]domainRow, len(replies))
+
+		var domain string
+		for i, key := range replies {
+			reply := c.Cmd("HGET", "$domainkeys", key)
+			if reply.Type != redis.NilReply {
+				domain, err = reply.Str()
+				errHndlr(err)
+				domains[i] = domainRow{
+					Key:    key,
+					Domain: domain,
+				}
+			}
+		}
+		context["domains"] = domains
 	}
 	// this assumes there's a `templates/index.tmpl` file
 	renderer.HTML(w, http.StatusOK, "index", context)
@@ -229,7 +277,6 @@ func bulkHandler(w http.ResponseWriter, req *http.Request) {
 	err = decoder.Decode(&bs)
 	errHndlr(err)
 	for _, b := range bs.Documents {
-		// fmt.Println(b.URL, b.Title, b.Popularity, b.Group)
 		insertDocument(
 			domain,
 			b.Title,
@@ -653,14 +700,147 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 	renderer.JSON(w, http.StatusNoContent, output)
 }
 
+func logoutHandler(w http.ResponseWriter, req *http.Request) {
+	expire := time.Now().AddDate(0, 0, -1)
+	secureCookie := isOnHTTPS(req)
+	cookie := &http.Cookie{
+		Name:     "username",
+		Value:    "*deleted*",
+		Path:     "/",
+		Expires:  expire,
+		MaxAge:   -1,
+		Secure:   secureCookie,
+		HttpOnly: true,
+	}
+	http.SetCookie(w, cookie)
+	http.Redirect(w, req, "/#loggedout", http.StatusTemporaryRedirect)
+}
+
+func handleGitHubLogin(w http.ResponseWriter, req *http.Request) {
+	url := oauthConf.AuthCodeURL(oauthStateString, oauth2.AccessTypeOnline)
+	http.Redirect(w, req, url, http.StatusTemporaryRedirect)
+}
+
+func handleGitHubCallback(w http.ResponseWriter, req *http.Request) {
+	state := req.FormValue("state")
+	if state != oauthStateString {
+		fmt.Printf("invalid oauth state, expected '%s', got '%s'\n", oauthStateString, state)
+		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+		return
+	}
+
+	code := req.FormValue("code")
+	token, err := oauthConf.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		fmt.Printf("oauthConf.Exchange() failed with '%s'\n", err)
+		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+		return
+	}
+
+	oauthClient := oauthConf.Client(oauth2.NoContext, token)
+	client := github.NewClient(oauthClient)
+	// the second item here is the github.Rate config
+	user, _, err := client.Users.Get("")
+
+	if err != nil {
+		fmt.Printf("client.Users.Get() faled with '%s'\n", err)
+		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+		return
+	}
+
+	fmt.Printf("Logged in as GitHub user: %s\n", *user.Login)
+	// userstate.Login(w, *user.Login)
+	expire := time.Now().AddDate(0, 0, 1) // how long is this?
+	secureCookie := isOnHTTPS(req)
+	cookie := &http.Cookie{
+		Name:     "username",
+		Value:    *user.Login,
+		Path:     "/",
+		Expires:  expire,
+		MaxAge:   60 * 60 * 24 * 30, // 30 days
+		Secure:   secureCookie,
+		HttpOnly: true,
+	}
+	http.SetCookie(w, cookie)
+	http.Redirect(w, req, "/#auth", http.StatusTemporaryRedirect)
+}
+
+var letters = []rune(
+	"abcdefghjkmnopqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ123456789",
+)
+
+func randString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func domainkeyNewHandler(w http.ResponseWriter, req *http.Request) {
+	domain := strings.Trim(req.FormValue("domain"), " ")
+	if domain != "" {
+		cookie, err := req.Cookie("username")
+		if err == nil {
+			c, err := redisPool.Get()
+			errHndlr(err)
+			defer redisPool.CarefullyPut(c, &err)
+
+			key := randString(24)
+			userdomainsKey := fmt.Sprintf("$userdomains$%v", cookie.Value)
+			err = c.Cmd("SADD", userdomainsKey, key).Err
+			errHndlr(err)
+			err = c.Cmd("HSET", "$domainkeys", key, domain).Err
+			errHndlr(err)
+		}
+	}
+
+	// http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, req, "/#auth", http.StatusFound)
+}
+
+func domainkeyDeleteHandler(w http.ResponseWriter, req *http.Request) {
+	key := strings.Trim(req.FormValue("key"), " ")
+	if key != "" {
+		cookie, err := req.Cookie("username")
+		if err == nil {
+			c, err := redisPool.Get()
+			errHndlr(err)
+			defer redisPool.CarefullyPut(c, &err)
+
+			userdomainsKey := fmt.Sprintf("$userdomains$%v", cookie.Value)
+			err = c.Cmd("SREM", userdomainsKey, key).Err
+			errHndlr(err)
+			err = c.Cmd("HDEL", "$domainkeys", key).Err
+			errHndlr(err)
+		}
+	}
+
+	http.Redirect(w, req, "/#auth", http.StatusFound)
+}
+
 var (
-	redisPool *pool.Pool
-	procs     int
-	debug     = true
-	renderer  = render.New()
-	redisURL  = "127.0.0.1:6379"
-	// authKeys     *AuthKeys
+	redisPool    *pool.Pool
+	procs        int
+	debug        = true
+	renderer     = render.New()
+	redisURL     = "127.0.0.1:6379"
 	staticPrefix = ""
+	usingHTTPS   = false
+)
+
+var (
+	// You must register the app at https://github.com/settings/applications
+	// Set callback to http://127.0.0.1:7000/github_oauth_cb
+	// Set ClientId and ClientSecret to
+	oauthConf = &oauth2.Config{
+		ClientID:     "",
+		ClientSecret: "",
+		Scopes:       []string{"user:email"},
+		Endpoint:     githuboauth.Endpoint,
+	}
+	// random string for oauth2 API calls to protect against CSRF
+	oauthStateString = "thisshouldberandom"
 )
 
 func main() {
@@ -668,6 +848,8 @@ func main() {
 		port          = 3001
 		redisDatabase = 0
 		redisPoolSize = 10
+		clientID      = ""
+		clientSecret  = ""
 	)
 	flag.IntVar(&port, "port", port, "Port to start the server on")
 	flag.IntVar(&procs, "procs", 1, "Number of CPU processors (0 to use max)")
@@ -680,7 +862,18 @@ func main() {
 		"Prefix in front of static assets in HTML")
 	flag.IntVar(&redisDatabase, "redisDatabase", redisDatabase,
 		"Redis database number to connect to")
+	flag.StringVar(
+		&clientID, "clientID", clientID,
+		"OAuth Client ID")
+	flag.StringVar(
+		&clientSecret, "clientSecret", clientSecret,
+		"OAuth Client Secret")
+	flag.BoolVar(&usingHTTPS, "usingHTTPS", usingHTTPS,
+		"Whether requests are made under HTTPS")
 	flag.Parse()
+
+	oauthConf.ClientID = clientID
+	oauthConf.ClientSecret = clientSecret
 
 	fmt.Println("REDIS DATABASE:", redisDatabase)
 	fmt.Println("DEBUG MODE:", debug)
@@ -727,9 +920,6 @@ func main() {
 	redisPool, err = pool.NewCustomPool("tcp", redisURL, redisPoolSize, df)
 	errHndlr(err)
 
-	// authKeys = new(AuthKeys)
-	// authKeys.Init()
-
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", indexHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", fetchHandler).Methods("GET", "HEAD")
@@ -738,7 +928,13 @@ func main() {
 	mux.HandleFunc("/v1/stats", privateStatsHandler).Methods("GET")
 	mux.HandleFunc("/v1/flush", flushHandler).Methods("DELETE")
 	mux.HandleFunc("/v1/bulk", bulkHandler).Methods("POST", "PUT")
+	mux.HandleFunc("/login", handleGitHubLogin).Methods("GET")
+	mux.HandleFunc("/logout", logoutHandler).Methods("GET", "POST")
+	mux.HandleFunc("/github_oauth_cb", handleGitHubCallback).Methods("GET")
+	mux.HandleFunc("/domainkeys/new", domainkeyNewHandler).Methods("POST")
+	mux.HandleFunc("/domainkeys/delete", domainkeyDeleteHandler).Methods("POST")
 
+	// handleGitHubLogin
 	n := negroni.Classic()
 
 	n.UseHandler(mux)

@@ -36,6 +36,7 @@ def populate(database, destination, domain, flush=False, bulk=False):
     print "KEY", key
     print "DOMAIN", domain
     c.hset('$domainkeys', key, domain)
+    c.sadd('$userdomains$peterbe', key)
 
     items = get_blogposts()
     #items = get_events()
