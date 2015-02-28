@@ -858,7 +858,7 @@ var (
 		Endpoint:     githuboauth.Endpoint,
 	}
 	// random string for oauth2 API calls to protect against CSRF
-	oauthStateString = "thisshouldberandom"
+	oauthStateString = randString(24)
 )
 
 func main() {
