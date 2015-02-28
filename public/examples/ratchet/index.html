@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Ratchet Example</title>
+
+    <!-- Sets initial viewport load and disables zooming  -->
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+
+    <!-- Makes your prototype chrome-less once bookmarked to your phone's home screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <!-- Include the compiled Ratchet CSS -->
+    <link href="css/ratchet.css" rel="stylesheet">
+    <link href="/dist/autocompeter.min.css" rel="stylesheet">
+    <style>
+    /* necessary overrides specifically for Ratchet */
+    ._ac-wrap {
+      width: 100%;
+    }
+    ._ac-wrap ._ac-results {
+      width: 98%;
+    }
+    </style>
+
+    <!-- Include the compiled Ratchet JS -->
+    <script src="js/ratchet.js"></script>
+
+
+  </head>
+  <body>
+
+    <!-- Make sure all your bars are the first things in your <body> -->
+    <header class="bar bar-nav">
+      <h1 class="title">Ratchet</h1>
+    </header>
+
+    <div class="bar bar-standard bar-header-secondary">
+     <form>
+       <input type="search" placeholder="Search">
+     </form>
+   </div>
+
+    <!-- Wrap all non-bar HTML in the .content div (this is actually what scrolls) -->
+    <div class="content">
+      <p class="content-padded">
+        Ratchet is a cool CSS framework that makes it look like an iOS
+        device.
+      </p>
+      <p class="content-padded">
+        <a href="https://autocompeter.com">Go back to Autocompeter.com</a>
+      </p>
+      <p class="content-padded">
+        This example implementation is hardcoded to use the
+        <code>www.peterbe.com</code> domain.<br>
+      </p>
+      <!-- <div class="card">
+        <ul class="table-view">
+          <li class="table-view-cell">
+            <a class="push-right" href="http://goratchet.com">
+              <strong>Ratchet documentation</strong>
+            </a>
+          </li>
+          <li class="table-view-cell">
+            <a class="push-right" href="https://github.com/twbs/ratchet/">
+              <strong>Ratchet on Github</strong>
+            </a>
+          </li>
+          <li class="table-view-cell">
+            <a class="push-right" href="https://groups.google.com/forum/#!forum/goratchet">
+              <strong>Ratchet Google group</strong>
+            </a>
+          </li>
+          <li class="table-view-cell">
+            <a class="push-right" href="https://twitter.com/goratchet">
+              <strong>Ratchet on Twitter</strong>
+            </a>
+          </li>
+        </ul>
+      </div> -->
+    </div>
+
+    <script src="/dist/autocompeter.min.js"></script>
+    <script>
+    Autocompeter(document.querySelector('input[type="search"]'), {
+      url: 'https://autocompeter.com/v1',
+      domain: 'www.peterbe.com',
+    });
+    </script>
+  </body>
+</html>
