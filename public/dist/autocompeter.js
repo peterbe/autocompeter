@@ -100,7 +100,7 @@
       spellcheck: false,
       autocomplete: 'off',
       readonly: 'readonly',
-      type: 'text',
+      type: q.type || 'text',
       className: q.className + ' _ac-hint'
     });
 
