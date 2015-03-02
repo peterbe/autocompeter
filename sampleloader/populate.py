@@ -4,6 +4,7 @@ import os
 import json
 import hashlib
 import time
+import glob
 
 import click
 import requests
@@ -11,7 +12,6 @@ import redis
 
 
 _base = 'http://localhost:3000'
-key = hashlib.md5(open(__file__).read()).hexdigest()
 _here = os.path.dirname(__file__)
 
 
@@ -29,27 +29,41 @@ def get_events():
         yield (item['title'], item['url'], item['popularity'], group)
 
 
-def populate(database, destination, domain, flush=False, bulk=False):
+def get_items(jsonfile):
+    items = json.load(open(jsonfile))['items']
+    for i, item in enumerate(items):
+        if 'group' in item:
+            group = item['group']
+            group = group != 'public' and group or ''
+        else:
+            group = None
+        yield (item['title'], item['url'], item.get('popularity'), group)
+
+
+def populate(database, destination, domain, jsonfile, flush=False, bulk=False):
     c = redis.StrictRedis(host='localhost', port=6379, db=database)
     if flush:
         c.flushdb()
+    key = hashlib.md5(open(__file__).read()).hexdigest()
+
     print "KEY", key
     print "DOMAIN", domain
     c.hset('$domainkeys', key, domain)
     c.sadd('$userdomains$peterbe', key)
 
-    items = get_blogposts()
+    items = get_items(jsonfile)
+    # items = get_blogposts()
     #items = get_events()
     t0 = time.time()
     if bulk:
-        _in_bulk(destination, items)
+        _in_bulk(destination, items, key)
     else:
-        _one_at_a_time(destination, items)
+        _one_at_a_time(destination, items, key)
     t1 = time.time()
     print "TOOK", t1 - t0
 
 
-def _one_at_a_time(destination, items):
+def _one_at_a_time(destination, items, key):
     for title, url, popularity, group in items:
         _url = destination + '/v1'
         data = {
@@ -68,7 +82,7 @@ def _one_at_a_time(destination, items):
         assert r.status_code == 201, r.status_code
 
 
-def _in_bulk(destination, items):
+def _in_bulk(destination, items, key):
     data = {
         'documents': [
             dict(
@@ -89,18 +103,28 @@ def _in_bulk(destination, items):
     assert r.status_code == 201, r.status_code
 
 
+_json_files = glob.glob(os.path.join(_here, '*.json'))
+
 @click.command()
 @click.option('--database', '-d', default=8)
 @click.option('--destination', default='https://autocompeter.com')
 @click.option('--domain', default='autocompeter.com')
+@click.option('--dataset', default='blogposts.json')
 @click.option('--flush', default=False, is_flag=True)
 @click.option('--bulk', default=False, is_flag=True)
-def run(database, destination, domain, flush=False, bulk=False):
+def run(database, destination, domain, dataset, flush=False, bulk=False):
     #print (database, domain, flush)
+    for filename in _json_files:
+        if os.path.basename(filename) == dataset:
+            jsonfile = filename
+            break
+    else:
+        raise ValueError("dataset %r not recognized" % dataset)
     populate(
         database,
         destination,
         domain,
+        jsonfile,
         flush=flush,
         bulk=bulk,
     )
