@@ -962,7 +962,6 @@ func main() {
 	mux.HandleFunc("/domainkeys/new", domainkeyNewHandler).Methods("POST")
 	mux.HandleFunc("/domainkeys/delete", domainkeyDeleteHandler).Methods("POST")
 
-	// handleGitHubLogin
 	n := negroni.Classic()
 
 	n.UseHandler(mux)
