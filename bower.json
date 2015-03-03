@@ -1,6 +1,6 @@
 {
   "name": "autocompeter",
-  "version": "0.1.2",
+  "version": "1.0.5",
   "homepage": "http://autocompeter.com",
   "authors": [
     "Peter Bengtsson <mail@peterbe.com>"
@@ -21,6 +21,7 @@
     "bower_components",
     "sampleloader",
     "public/README.md",
+    "public/examples",
     "public/js",
     "public/css",
     "public/img",
