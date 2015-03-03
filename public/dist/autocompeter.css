@@ -18,7 +18,7 @@
     z-index: 10;
     position: absolute;
     background-color: white;
-    border: 1px solid #d2d2d2;
+    border: 1px solid #ebebeb;
     width: 400px;
     display: none;
     border-radius: 3px;
@@ -29,7 +29,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      border-bottom: 1px solid #d2d2d2;
+      border-bottom: 1px solid #ebebeb;
       cursor: pointer;
       text-align: left; }
     ._ac-wrap ._ac-results p a {
@@ -37,4 +37,4 @@
     ._ac-wrap ._ac-results p:last-child {
       border-bottom: none; }
     ._ac-wrap ._ac-results p.selected {
-      background-color: #efefef; }
+      background-color: #f2f2f2; }
