@@ -27,13 +27,18 @@ prefer them to be.
 
 To use our CDN the URL is:
 
-[http://cdn.autocompeter.com/dist/autocompeter.min.js](http://cdn.autocompeter.com/dist/autocompeter.min.js) (or [https version](https://cdn.autocompeter.com/dist/autocompeter.min.js))
+[http://cdn.jsdelivr.net/autocompeter/1/autocompeter.min.js](http://cdn.jsdelivr.net/autocompeter/1/autocompeter.min.js) (or [https version](https://cdn.jsdelivr.net/autocompeter/1/autocompeter.min.js))
 
 But it's recommended that when you insert this URL into your site, instead
 of prefixing it with `http://` or `https://` prefix it with just `//`. E.g.
 like this:
 
-    <script src="//cdn.autocompeter.com/dist/autocompeter.min.js"></script>
+    <script src="//cdn.jsdelivr.net/autocompeter/1/autocompeter.min.js"></script>
+
+If you want to use a more specific version on the
+[jsdelivr.net CDN](http://www.jsdelivr.com/) with more aggressive cache headers
+then go to [http://www.jsdelivr.com/#!autocompeter](http://www.jsdelivr.com/#!autocompeter)
+and pick up the latest version.
 
 ## Configure the Javascript
 

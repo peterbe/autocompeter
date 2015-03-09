@@ -11,7 +11,7 @@ Or...
 
 Or...
 
-    <link rel="stylesheet" href="//cdn.autocompeter.com/dist/autocompeter.min.css">
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/autocompeter/1/autocompeter.min.css">
 
 There is also another alternative. If you already use [Sass (aka. SCSS)](http://sass-lang.com/)
 you can download [autocompeter.scss](https://github.com/peterbe/autocompeter/blob/master/src/autocompeter.scss)
@@ -24,7 +24,7 @@ you don't exactly like the way it looks or it just doesn't work as expected.
 The recommended way to deal with this is to override certain selectors. For
 example it might look like this:
 
-    <link rel="stylesheet" href="//cdn.autocompeter.com/dist/autocompeter.min.css">
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/autocompeter/1/autocompeter.min.css">
     <style>
     ._ac-wrap { width: 400px; }
     @media only screen and (max-width : 321px) {
@@ -34,3 +34,14 @@ example it might look like this:
 
 As an example, with the design being used on
 [autocompeter.com](http://autocompeter.com) some CSS had to be overridden.
+
+
+## About using a CDN for CSS
+
+Note, if performance is important to you, note that it's actually not a good
+idea to use the CDN URL to reference the stylesheet. The reason for that is
+that oftentimes, a DNS lookup is actually slower than CSS download from a
+lesser fast server.
+
+There's a lot of resources online, [like this one](http://csswizardry.com/2013/01/front-end-performance-for-web-designers-and-front-end-developers/#section:css-and-performance),
+that elaborate this in much more detail.
