@@ -140,10 +140,6 @@
       // return a new array where all results are matched
       // on all of the terms
       var new_results = [];
-      if (typeof terms === 'string') {
-        console.error('TERMS:', terms);
-        throw "terms is a string";
-      }
       var search_terms = terms.map(escapeRegExp);
       var re = new RegExp('\\b(' + search_terms.join('|') + ')', 'gi');
       for (var i=0, len=results.length; i < len; i++) {
