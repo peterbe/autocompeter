@@ -136,11 +136,35 @@
       }
     }
 
+    function filterResults(results, terms) {
+      // return a new array where all results are matched
+      // on all of the terms
+      var new_results = [];
+      if (typeof terms === 'string') {
+        console.error('TERMS:', terms);
+        throw "terms is a string";
+      }
+      var search_terms = terms.map(escapeRegExp);
+      var re = new RegExp('\\b(' + search_terms.join('|') + ')', 'gi');
+      for (var i=0, len=results.length; i < len; i++) {
+        if (re.test(results[i][1])) {
+          new_results.push(results[i]);
+        }
+      }
+      return new_results;
+    }
+
     var results = null;
     var terms;
-    function displayResults() {
+
+    function displayResults(preAjax) {
+      preAjax = preAjax || false;
       var i, len;
       if (results === null) return;
+      if (preAjax) {
+        // filter the results with the new terms manually
+        results = filterResults(results, terms);
+      }
       if (results.length) {
         r.style.display = 'block';
         var ps = r.getElementsByTagName('p');
@@ -157,6 +181,7 @@
       if (!results.length) {
         hint.value = q.value;
       }
+
       var search_terms = terms.map(escapeRegExp);
       var re = new RegExp('\\b(' + search_terms.join('|') + ')(\\w+)\\b', 'gi');
 
@@ -195,7 +220,6 @@
         results_ps.push(p);
       }
       r.appendChild(p_fragments);
-
       if (hint_candidates.length && q.value.charAt(q.value.length - 1) !== ' ') {
         hint_candidate = hint_candidates[selected_pointer % hint_candidates.length];
         hint.value = q.value + hint_candidate;
@@ -275,11 +299,26 @@
     }
 
     var cache = {};
+    var req;
+    var req_value;
+
     function handler() {
       if (!q.value.trim()) {
         hint.value = '';
         r.style.display = 'none';
         return;
+      } else if (hint.value.length) {
+        // perhaps the hint.value no longer is applicable, in that case
+        // unset the hint.value
+        if (hint.value.indexOf(q.value.trim()) === -1) {
+          hint.value = q.value;
+        }
+        if (r.style.display === 'block') {
+          // display the results again because the displays are shown
+          // but the typed value is not visible
+          terms = q.value.trim().split(/\s+/);
+          displayResults(true);
+        }
       }
       // new character, let's reset the selected_pointer
       selected_pointer = 0;
@@ -289,7 +328,9 @@
         results = response.results;
         displayResults();
       } else {
-        var req;
+        if (req) {
+          req.abort();
+        }
         if (window.XMLHttpRequest) { // Mozilla, Safari, ...
             req = new XMLHttpRequest();
         } else if (window.ActiveXObject) { // IE 8 and older
@@ -298,18 +339,25 @@
         req.onreadystatechange = function() {
           if (req.readyState === 4) {
             if (req.status === 200) {
-              var response = JSON.parse(req.responseText);
-              cache[q.value.trim()] = response;
-              terms = response.terms;
-              results = response.results;
-              displayResults();
+              if (req_value === q.value) {
+                var response = JSON.parse(req.responseText);
+                cache[q.value.trim()] = response;
+                terms = response.terms;
+                results = response.results;
+                displayResults();
+              }
             } else {
-              console.warn(req.status, req.responseText);
-              handleAjaxError();
+              // if the req.status is 0, it's because the request was aborted
+              if (req.status !== 0) {
+                console.warn(req.status, req.responseText);
+                handleAjaxError();
+              }
+
             }
           }
         };
         req.open('GET', options.url + encodeURIComponent(q.value.trim()), true);
+        req_value = q.value;
         req.send();
       }
     }

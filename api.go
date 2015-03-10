@@ -359,6 +359,7 @@ func (f *fetchForm) FieldMap() binding.FieldMap {
 }
 
 func fetchHandler(w http.ResponseWriter, req *http.Request) {
+	// time.Sleep(1 * time.Second)
 	form := new(fetchForm)
 	errs := binding.Bind(req, form)
 	if errs.Handle(w) {
