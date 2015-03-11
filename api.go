@@ -459,6 +459,10 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		*xs = (*xs)[:j]
 	}
 	RemoveDuplicates(&replyStructs)
+	if len(replyStructs) > n {
+		replyStructs = replyStructs[:n]
+	}
+
 	// We might want to sort this here by the extra business logic
 	// on sorting.
 	encodedUrls := make([]string, len(replyStructs))
