@@ -1,0 +1,66 @@
+PROCS=1:
+--------
+Bulk loading
+KEY 2506e9deedfa0a2a707a4246e29993eb
+DOMAIN mydomain
+TOOK 0.476712942123
+
+The home page
+Requests/sec:   5729.46
+Single word search 'p'
+Requests/sec:   3178.71
+Single word search 'python'
+Requests/sec:   3098.61
+Single word search 'xxxxxx'
+Requests/sec:   5420.96
+Double word search 'python', 'te'
+Requests/sec:   2797.01
+Double word search 'xxxxxxxx', 'yyyyyyy'
+Requests/sec:   4773.27
+Double word search 'xxxxxxxx', 'yyyyyyy'
+Requests/sec:   4842.77
+
+
+PROCS=2:
+--------
+Bulk loading
+KEY 2506e9deedfa0a2a707a4246e29993eb
+DOMAIN mydomain
+TOOK 0.463844060898
+The home page
+Requests/sec:   7590.63
+Single word search 'p'
+Requests/sec:   4137.35
+Single word search 'python'
+Requests/sec:   4056.33
+Single word search 'xxxxxx'
+Requests/sec:   7845.38
+Double word search 'python', 'te'
+Requests/sec:   2872.08
+Double word search 'xxxxxxxx', 'yyyyyyy'
+Requests/sec:   6565.15
+Double word search 'xxxxxxxx', 'yyyyyyy'
+Requests/sec:   6892.79
+
+
+PROCS=8:
+--------
+
+Bulk loading
+KEY 2506e9deedfa0a2a707a4246e29993eb
+DOMAIN mydomain
+TOOK 0.493665933609
+The home page
+Requests/sec:  13270.65
+Single word search 'p'
+Requests/sec:   5156.74
+Single word search 'python'
+Requests/sec:   4463.62
+Single word search 'xxxxxx'
+Requests/sec:  11166.61
+Double word search 'python', 'te'
+Requests/sec:   3304.49
+Double word search 'xxxxxxxx', 'yyyyyyy'
+Requests/sec:   8546.56
+Double word search 'xxxxxxxx', 'yyyyyyy'
+Requests/sec:   8390.73
