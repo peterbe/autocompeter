@@ -607,17 +607,6 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	now := time.Now()
-	// var dt time.Time
-	var fetchKey string
-	for y := 2015; y <= now.Year(); y++ {
-		for m := 1; m <= 12; m++ {
-			fetchKey = fmt.Sprintf("$domainfetches$%v$%v", y, m)
-			c.Append("HDEL", fetchKey, domain)
-			pipedCommands++
-		}
-	}
-
 	for i := 1; i <= pipedCommands; i++ {
 		if err := c.GetReply().Err; err != nil {
 			errHndlr(err)
