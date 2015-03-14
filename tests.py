@@ -12,6 +12,7 @@ import unittest
 from nose.tools import ok_, eq_
 import redis
 import requests
+import psycopg2
 
 
 class E2E(unittest.TestCase):
@@ -21,14 +22,26 @@ class E2E(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.c = redis.StrictRedis(host='localhost', port=6379, db=8)
+        cls.conn = psycopg2.connect('dbname=autocompeter')
 
     def setUp(self):
         self.c.flushdb()
         assert self.c.dbsize() == 0, self.c.dbsize()
+
+        c = self.conn.cursor()
+        c.execute("truncate keys, domains, titles, words, searches cascade")
+        self.conn.commit()
+
         self._set_domain_key('xyz123', 'peterbecom')
 
     def _set_domain_key(self, key, domain):
         self.c.hset('$domainkeys', key, domain)
+
+        c = self.conn.cursor()
+        c.execute("insert into domains(name)values(%s) returning id", (domain,))
+        id, = c.fetchone()
+        c.execute("insert into keys(key, domain_id)values(%s, %s)", (key, id))
+        self.conn.commit()
 
     def get(self, url, *args, **kwargs):
         return requests.get(self._base + url, *args, **kwargs)
@@ -81,6 +94,31 @@ class E2E(unittest.TestCase):
             'popularity': "12",
             'title': "This is a blog about something",
         }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+
+        r = self.get('/v1?q=blo&d=peterbecom')
+        eq_(
+            r.json(),
+            {
+                'terms': [u'blo'],
+                'results': [
+                    [
+                        u'/plog/something',
+                        u'This is a blog about something'
+                    ]
+                ]
+            }
+        )
+
+    def test_post_twice_ok(self):
+        data = {
+            'url': ' /plog/something   ',
+            'popularity': "12",
+            'title': "This is a blog about something",
+        }
+        r = self.post('/v1', data, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+        r = self.post('/v1', data, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
 
         r = self.get('/v1?q=blo&d=peterbecom')
@@ -179,7 +217,6 @@ class E2E(unittest.TestCase):
         )
 
     def test_fetch_with_dfferent_n(self):
-        self._set_domain_key('xyz123', 'peterbecom')
         for i in range(1, 20):
             r = self.post('/v1', {
                 'url': '/%d' % i,
@@ -208,7 +245,6 @@ class E2E(unittest.TestCase):
         ok_(r.status_code >= 400 and r.status_code < 500)
 
     def test_sorted_by_popularity(self):
-        self._set_domain_key('xyz123', 'peterbecom')
         r = self.post('/v1', {
             'url': '/minor',
             'popularity': "1.1",
@@ -288,7 +324,6 @@ class E2E(unittest.TestCase):
         eq_(r.status_code, 403)
 
     def test_delete_row(self):
-        self._set_domain_key('xyz123', 'peterbecom')
         r = self.post('/v1', {
             'url': '/plog/something',
             'title': "This is a blog about something",
@@ -307,7 +342,6 @@ class E2E(unittest.TestCase):
         ok_(not r.json()['results'])
 
     def test_delete_row_belonging_a_group(self):
-        self._set_domain_key('xyz123', 'peterbecom')
         r = self.post('/v1', {
             'url': '/plog/something',
             'title': "This is a blog about something",
@@ -333,7 +367,6 @@ class E2E(unittest.TestCase):
         ok_(not r.json()['results'])
 
     def test_delete_invalid_url(self):
-        self._set_domain_key('xyz123', 'peterbecom')
         r = self.post('/v1', {
             'url': '/plog/something',
             'title': "This is a blog about something",
@@ -347,7 +380,6 @@ class E2E(unittest.TestCase):
 
     def test_delete_row_carefully(self):
         """deleting one item, by URL, shouldn't affect other entries"""
-        self._set_domain_key('xyz123', 'peterbecom')
         # first one
         r = self.post('/v1', {
             'url': '/plog/something',
@@ -376,7 +408,6 @@ class E2E(unittest.TestCase):
         ])
 
     def test_delete_domain(self):
-        self._set_domain_key('xyz123', 'peterbecom')
         r = self.post('/v1', {
             'url': '/plog/something',
             'title': "blog something",

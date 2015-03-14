@@ -4,3 +4,4 @@ redis
 nose
 click
 mkdocs
+psycopg2

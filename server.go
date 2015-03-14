@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/codegangsta/negroni"
 	"github.com/fzzy/radix/extra/pool"
@@ -227,6 +228,7 @@ var (
 	staticPrefix = ""
 	usingHTTPS   = false
 	sCookie      *securecookie.SecureCookie
+	db           *sql.DB
 )
 
 var (
@@ -293,6 +295,10 @@ func main() {
 		redisPoolSize = 100
 	}
 
+	var err error
+	db, err = sql.Open("postgres", "postgres://localhost/autocompeter?sslmode=disable")
+	errHndlr(err)
+
 	// Figuring out how many processors to use.
 	maxProcs := runtime.NumCPU()
 	if procs == 0 {
@@ -326,7 +332,7 @@ func main() {
 		return client, nil
 	}
 
-	var err error
+	// var err error
 	redisPool, err = pool.NewCustomPool("tcp", redisURL, redisPoolSize, df)
 	errHndlr(err)
 
