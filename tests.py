@@ -197,7 +197,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': [u'blog'],
+                'terms': [u'about'],
                 'results': [
                     [
                         u'/some/page',

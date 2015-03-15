@@ -110,11 +110,6 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	form.Title = strings.Trim(form.Title, " ")
 	form.URL = strings.Trim(form.URL, " ")
-	// group := form.Group
-
-	// c, err := redisPool.Get()
-	// errHndlr(err)
-	// defer redisPool.Put(c)
 
 	var domainID int
 	err := db.QueryRow(
@@ -125,21 +120,6 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 		renderer.JSON(w, http.StatusForbidden, output)
 		return
 	}
-	// domain, err := GetDomain(key, c)
-	// if domain == "" {
-	// 	output := map[string]string{"error": "Auth-Key not recognized"}
-	// 	renderer.JSON(w, http.StatusForbidden, output)
-	// 	return
-	// }
-
-	// insertDocument(
-	// 	domain,
-	// 	form.Title,
-	// 	form.URL,
-	// 	form.Group,
-	// 	form.Popularity,
-	// 	c,
-	// )
 
 	insertDocumentSQL(
 		domainID,
@@ -152,40 +132,6 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	output := map[string]string{"message": "OK"}
 	renderer.JSON(w, http.StatusCreated, output)
 }
-
-// func insertDocument(domain, title, url, group string, popularity float64, c *redis.Client) {
-// 	encoded := encodeString(domain)
-// 	encodedURL := encodeString(url)
-//
-// 	existingTitle, _ := c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
-// 	if existingTitle == "" {
-// 		err := c.Cmd("HINCRBY", "$domaindocuments", domain, 1).Err
-// 		errHndlr(err)
-// 	}
-//
-// 	pipedCommands := 0
-// 	for _, prefix := range getPrefixes(title) {
-// 		if group != "" {
-// 			encodedGroup := encodeString(group)
-// 			c.Append("ZADD", encoded+encodedGroup+prefix, popularity, encodedURL)
-// 			c.Append("HSET", encoded+"$groups", encodedURL, encodedGroup)
-// 			pipedCommands++
-// 		} else {
-// 			c.Append("ZADD", encoded+prefix, popularity, encodedURL)
-// 		}
-// 		pipedCommands++
-// 	}
-// 	c.Append("HSET", encoded+"$titles", encodedURL, title)
-// 	pipedCommands++
-// 	c.Append("HSET", encoded+"$urls", encodedURL, url)
-// 	pipedCommands++
-// 	for i := 1; i <= pipedCommands; i++ {
-// 		if err := c.GetReply().Err; err != nil {
-// 			errHndlr(err)
-// 		}
-// 	}
-//
-// }
 
 func insertDocumentSQL(domainID int, title, url, group string, popularity float64) {
 	var titleID int
@@ -218,7 +164,6 @@ func insertDocumentSQL(domainID int, title, url, group string, popularity float6
 	}
 
 	for _, prefix := range getPrefixes(title) {
-		fmt.Println(prefix, titleID, domainID)
 		_, err := db.Exec(
 			`insert into words(prefix, title_id, domain_id) (
 			select $1 as prefix, $2 as title_id, $3 as domain_id
@@ -252,9 +197,6 @@ func bulkHandler(w http.ResponseWriter, req *http.Request) {
 		renderer.JSON(w, http.StatusForbidden, output)
 		return
 	}
-	// c, err := redisPool.Get()
-	// errHndlr(err)
-	// defer redisPool.Put(c)
 
 	var domainID int
 	err := db.QueryRow(
@@ -266,7 +208,6 @@ func bulkHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// encoded := encodeString(domain)
 	decoder := json.NewDecoder(req.Body)
 	var bs bulkDocuments
 	err = decoder.Decode(&bs)
@@ -336,10 +277,6 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	form.URL = strings.Trim(form.URL, " ")
 
-	// c, err := redisPool.Get()
-	// errHndlr(err)
-	// defer redisPool.CarefullyPut(c, &err)
-
 	var domainID int
 	err := db.QueryRow(
 		`select domain_id from keys where key=$1`, key,
@@ -349,12 +286,6 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 		renderer.JSON(w, http.StatusForbidden, output)
 		return
 	}
-	// domain, err := GetDomain(key, c)
-	// if domain == "" {
-	// 	output := map[string]string{"error": "Auth-Key not recognized"}
-	// 	renderer.JSON(w, http.StatusForbidden, output)
-	// 	return
-	// }
 
 	_, err = db.Exec(
 		`DELETE FROM titles WHERE domain_id = $1 AND url = $2`,
@@ -363,62 +294,9 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	)
 	errHndlr(err)
 
-	// encoded := encodeString(domain)
-	// encodedURL := encodeString(form.URL)
-	// var title string
-	// reply := c.Cmd("HGET", encoded+"$titles", encodedURL)
-	// if reply.Type == redis.NilReply {
-	// 	output := map[string]string{"error": "URL not recognized"}
-	// 	renderer.JSON(w, http.StatusNotFound, output)
-	// 	return
-	// }
-	// title, err = reply.Str()
-	//
-	// errHndlr(err)
-	// if title != "" {
-	// 	err = c.Cmd("HINCRBY", "$domaindocuments", domain, -1).Err
-	// 	errHndlr(err)
-	// }
-	//
-	// reply = c.Cmd("HGET", encoded+"$groups", encodedURL)
-	// encodedGroup := ""
-	// if reply.Type != redis.NilReply {
-	// 	encodedGroup, _ = reply.Str()
-	// }
-	// prefixes := getPrefixes(title)
-	// pipedCommands := 0
-	// for _, prefix := range prefixes {
-	// 	if encodedGroup != "" {
-	// 		c.Append("ZREM", encoded+encodedGroup+prefix, encodedURL)
-	// 		c.Append("HDEL", encoded+"$groups", encodedURL)
-	// 		pipedCommands++
-	// 	} else {
-	// 		c.Append("ZREM", encoded+prefix, encodedURL)
-	// 	}
-	//
-	// 	pipedCommands++
-	// }
-	//
-	// c.Append("HDEL", encoded+"$titles", encodedURL)
-	// pipedCommands++
-	// c.Append("HDEL", encoded+"$urls", encodedURL)
-	// pipedCommands++
-	//
-	// for i := 1; i <= pipedCommands; i++ {
-	// 	if err := c.GetReply().Err; err != nil {
-	// 		errHndlr(err)
-	// 	}
-	// }
 	output := map[string]string{"message": "OK"}
 	renderer.JSON(w, http.StatusNoContent, output)
 }
-
-// // Reply isn't a great name :)
-// type Reply struct {
-// 	URL   string
-// 	Title string
-// 	Score string
-// }
 
 type Result struct {
 	URL   string
@@ -490,15 +368,6 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// c, err := redisPool.Get()
-	// errHndlr(err)
-	// defer redisPool.CarefullyPut(c, &err)
-
-	// now := time.Now()
-	// thisMonthFetchesKey := fmt.Sprintf("$domainfetches$%v$%v", now.Year(), int(now.Month()))
-	// err = c.Cmd("HINCRBY", thisMonthFetchesKey, form.Domain, 1).Err
-	// errHndlr(err)
-
 	// THIS CAN BE CACHED
 	var domainID int
 	err := db.QueryRow(
@@ -508,7 +377,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 
 	var resultStructs []Result
 
-	appendReplies := func(terms []string, group string) { //} ([]string, error) {
+	appendReplies := func(terms []string, group string) {
 		var args []interface{}
 		args = append(args, domainID)
 		args = append(args, group)
@@ -532,16 +401,9 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 			query = strings.Join(parts, " INTERSECT ")
 		}
 
-		fmt.Println(query)
-		fmt.Println(args)
+		// fmt.Println(query)
+		// fmt.Println(args)
 		rows, err := db.Query(query, args...)
-		// rows, err := db.Query(
-		// 	`select t.url, t.title, t.popularity as score from titles t
-		// 	inner join words w on w.title_id=t.id
-		// 	where w.domain_id=$1 and w.prefix in $2
-		// 	order by t.popularity`,
-		// 	domainID, args...,
-		// 	)
 		errHndlr(err)
 		defer rows.Close()
 
@@ -550,74 +412,21 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 
 			err := rows.Scan(&result.URL, &result.Title, &result.Score)
 			errHndlr(err)
-			fmt.Println(result)
 			resultStructs = append(resultStructs, result)
 		}
 		err = rows.Err()
 		errHndlr(err)
 
-		// encodedTerms := make([]string, len(terms))
-		// encodedGroup := ""
-		// if group != "" {
-		// 	encodedGroup = encodeString(group)
-		// }
-		// for i, term := range terms {
-		// 	encodedTerms[i] = encoded + encodedGroup + term
-		// }
-		// var replies []string
-		// if len(terms) > 1 {
-		// 	c.Append("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
-		// 	c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
-		// 	c.GetReply() // the ZINTERSTORE
-		// 	replies, err = c.GetReply().List()
-		// } else {
-		// 	replies, err = c.Cmd("ZREVRANGE", encodedTerms[0], 0, n-1, "WITHSCORES").List()
-		// }
-		// return replies, err
 	}
 
 	var rows []interface{}
 	if err != nil {
-		// rows := make([]interface{}, 0)
 	} else {
 		appendReplies(terms, "")
 		for _, group := range groups {
 			appendReplies(terms, group)
 		}
 
-		// 	replies, err := getReplies(terms, "")
-		// errHndlr(err)
-		// var replyStructs []Reply
-		// for i, element := range replies {
-		// 	if i%2 == 0 {
-		// 		replyStructs = append(replyStructs, Reply{element, replies[i+1]})
-		// 	}
-		// }
-		// for _, group := range groups {
-		// 	replies, err = getReplies(terms, group)
-		// 	errHndlr(err)
-		// 	for i, element := range replies {
-		// 		if i%2 == 0 {
-		// 			replyStructs = append(replyStructs, Reply{element, replies[i+1]})
-		// 		}
-		// 	}
-		// }
-		// RemoveDuplicates := func(xs *[]Reply) {
-		// 	found := make(map[string]bool)
-		// 	j := 0
-		// 	for i, x := range *xs {
-		// 		if !found[x.URL] {
-		// 			found[x.URL] = true
-		// 			(*xs)[j] = (*xs)[i]
-		// 			j++
-		// 		}
-		// 	}
-		// 	*xs = (*xs)[:j]
-		// }
-		// RemoveDuplicates(&replyStructs)
-		// if len(replyStructs) > n {
-		// 	replyStructs = replyStructs[:n]
-		// }
 		RemoveDuplicates := func(xs *[]Result) {
 			found := make(map[string]bool)
 			j := 0
@@ -646,28 +455,6 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	// We might want to sort this here by the extra business logic
 	// on sorting.
-	// encodedUrls := make([]string, len(replyStructs))
-	// for i, each := range replyStructs {
-	// 	encodedUrls[i] = each.URL
-	// }
-	//
-	// var titles []string
-	// var urls []string
-	// if len(encodedUrls) == 0 {
-	// } else {
-	// 	titles, err = c.Cmd("HMGET", encoded+"$titles", encodedUrls).List()
-	// 	errHndlr(err)
-	// 	urls, err = c.Cmd("HMGET", encoded+"$urls", encodedUrls).List()
-	// 	errHndlr(err)
-	// }
-	// rows := make([]interface{}, len(titles))
-	// for i, title := range titles {
-	// 	row := make([]string, 2)
-	// 	row[0] = urls[i]
-	// 	row[1] = title
-	// 	rows[i] = row
-	// }
-	// rows = rows[:len(titles)]
 
 	_, err = db.Exec(
 		`insert into searches (domain_id, term, results)
@@ -700,16 +487,6 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 		renderer.JSON(w, http.StatusForbidden, output)
 		return
 	}
-	// c, err := redisPool.Get()
-	// errHndlr(err)
-	// defer redisPool.Put(c)
-	//
-	// domain, err := GetDomain(key, c)
-	// if err != nil {
-	// 	output := map[string]string{"error": "Auth-Key not recognized"}
-	// 	renderer.JSON(w, http.StatusForbidden, output)
-	// 	return
-	// }
 
 	documents := 0
 	err = db.QueryRow(
@@ -718,21 +495,7 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 	).Scan(&documents)
 	errHndlr(err)
 
-	// documentsStr, err := c.Cmd("HGET", "$domaindocuments", domain).Str()
-	// if documentsStr != "" {
-	// 	documents, err = strconv.Atoi(documentsStr)
-	// 	errHndlr(err)
-	// }
 	allFetches := make(map[string]map[string]int)
-	// if _, ok := allFetches["2015"]; !ok {
-	// 	allFetches["2015"] = make(map[string]int)
-	// }
-	// allFetches["2015"]["1"] = 100
-	// if _, ok := allFetches["2015"]; !ok {
-	// 	allFetches["2015"] = make(map[string]int)
-	// }
-	// allFetches["2015"]["2"] = 200
-	// fmt.Println(allFetches)
 
 	var firstSearch *time.Time
 	err = db.QueryRow(
@@ -743,12 +506,10 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 	if firstSearch != nil {
 		now := time.Now()
 		var fetches int
-		// var monthString string
 
 		date := firstSearch.AddDate(0, 0, 0)
 		for {
 			if date.Before(now) {
-				// fmt.Println(date)
 				err = db.QueryRow(
 					`select count(id) from searches where domain_id=$1 and
 					extract('month' from date_ at time zone 'UTC') = $2 and
