@@ -206,21 +206,6 @@ class E2E(unittest.TestCase):
                 ]
             }
         )
-        #
-        # r = self.get(u'/v1?q=bl\xf6g&d=peterbecom')
-        # eq_(r.status_code, 200)
-        # eq_(
-        #     r.json(),
-        #     {
-        #         'terms': [u'blög', u'blog'],
-        #         'results': [
-        #             [
-        #                 u'/some/page',
-        #                 u'Blögged about something else'
-        #             ]
-        #         ]
-        #     }
-        # )
 
     def test_unidecode(self):
         r = self.post('/v1', {

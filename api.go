@@ -45,7 +45,7 @@ func getPrefixes(title string) []string {
 	var prefixes []string
 	words, _ := cleanWords(title)
 	for _, word := range words {
-		for i, _ := range word {
+		for i := range word {
 			if i > 0 {
 				prefixes = append(prefixes, word[0:i])
 			}
@@ -298,7 +298,7 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	renderer.JSON(w, http.StatusNoContent, output)
 }
 
-type Result struct {
+type titleResult struct {
 	URL   string
 	Title string
 	Score string
@@ -375,7 +375,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		form.Domain,
 	).Scan(&domainID)
 
-	var resultStructs []Result
+	var resultStructs []titleResult
 
 	appendReplies := func(terms []string, group string) {
 		var args []interface{}
@@ -408,7 +408,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		defer rows.Close()
 
 		for rows.Next() {
-			var result Result
+			var result titleResult
 
 			err := rows.Scan(&result.URL, &result.Title, &result.Score)
 			errHndlr(err)
@@ -427,7 +427,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 			appendReplies(terms, group)
 		}
 
-		RemoveDuplicates := func(xs *[]Result) {
+		RemoveDuplicates := func(xs *[]titleResult) {
 			found := make(map[string]bool)
 			j := 0
 			for i, x := range *xs {
