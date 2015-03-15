@@ -45,9 +45,12 @@ func getPrefixes(title string) []string {
 	var prefixes []string
 	words, _ := cleanWords(title)
 	for _, word := range words {
-		for i := 1; i <= len(word); i++ {
-			prefixes = append(prefixes, word[0:i])
+		for i, _ := range word {
+			if i > 0 {
+				prefixes = append(prefixes, word[0:i])
+			}
 		}
+		prefixes = append(prefixes, word) // should we keep this?!
 		prefixes = append(prefixes, word+"$")
 	}
 	return prefixes

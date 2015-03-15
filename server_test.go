@@ -213,3 +213,12 @@ func TestGetPrefixes(t *testing.T) {
 	expect := []string{"w", "wo", "wor", "word", "word$"}
 	assert.Equal(t, got, expect)
 }
+
+func TestGetPrefixesWithUnicode(t *testing.T) {
+	got := getPrefixes("würd")
+	expect := []string{
+		"w", "wü", "wür", "würd", "würd$",
+		"w", "wu", "wur", "wurd", "wurd$",
+	}
+	assert.Equal(t, got, expect)
+}
