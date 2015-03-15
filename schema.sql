@@ -21,7 +21,7 @@ CREATE TABLE titles (
   title TEXT NOT NULL,
   url TEXT NOT NULL,
   popularity REAL DEFAULT 0.0 NOT NULL,
-  group_ TEXT NULL,
+  group_ TEXT NOT NULL DEFAULT '',
   UNIQUE(domain_id, url)
 );
 CREATE TABLE words (

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fiam/gounidecode/unidecode"
-	"github.com/fzzy/radix/redis"
 	_ "github.com/lib/pq"
 	"github.com/mholt/binding"
 	"net/http"
@@ -513,16 +512,26 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		var args []interface{}
 		args = append(args, domainID)
 		args = append(args, group)
-		query := `select t.url, t.title, t.popularity as score from titles t
-		inner join words w on w.title_id=t.id
-		where w.domain_id=$1 and t.group_=$2 and (`
-		for i, term := range terms {
-			query += fmt.Sprintf("w.prefix=$%v", i+3)
-			// NEED OR HERE
-			args = append(args, term)
+		var query string
+		if len(terms) == 1 {
+			query = `select t.url, t.title, t.popularity as score from titles t
+			inner join words w on w.title_id=t.id
+			where w.domain_id=$1 and t.group_=$2 and w.prefix=$3
+			order by t.popularity desc`
+			args = append(args, terms[0])
+		} else {
+			parts := make([]string, len(terms))
+			for i, term := range terms {
+				part := `select t.url, t.title, t.popularity as score from titles t
+				inner join words w on w.title_id=t.id
+				where w.domain_id=$1 and t.group_=$2 and w.prefix=`
+				part += fmt.Sprintf("$%v", i+3)
+				args = append(args, term)
+				parts[i] = part
+			}
+			query = strings.Join(parts, " INTERSECT ")
 		}
-		query += `)`
-		query += ` order by t.popularity desc`
+
 		fmt.Println(query)
 		fmt.Println(args)
 		rows, err := db.Query(query, args...)
@@ -660,6 +669,13 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	// }
 	// rows = rows[:len(titles)]
 
+	_, err = db.Exec(
+		`insert into searches (domain_id, term, results)
+		values($1, $2, $3)`,
+		domainID, form.Query, len(rows),
+	)
+	errHndlr(err)
+
 	output := make(map[string]interface{})
 	output["terms"] = searchedTerms
 	output["results"] = rows
@@ -707,45 +723,60 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 	// 	documents, err = strconv.Atoi(documentsStr)
 	// 	errHndlr(err)
 	// }
+	allFetches := make(map[string]map[string]int)
+	// if _, ok := allFetches["2015"]; !ok {
+	// 	allFetches["2015"] = make(map[string]int)
+	// }
+	// allFetches["2015"]["1"] = 100
+	// if _, ok := allFetches["2015"]; !ok {
+	// 	allFetches["2015"] = make(map[string]int)
+	// }
+	// allFetches["2015"]["2"] = 200
+	// fmt.Println(allFetches)
 
-	now := time.Now()
-	var dt time.Time
-	allFetches := make(map[string]interface{})
-	// var fetchKey string
-	// var fetchesStr string
-	// var fetches int
-	// starting on the year 2015 because that's when it all started
-	var fetches int
-	for y := 2015; y <= now.Year(); y++ {
-		thisYearFetches := make(map[string]int)
-		for m := 1; m <= 12; m++ {
-			dt = time.Date(y, time.Month(m), 1, 0, 0, 0, 0, time.UTC)
-			if dt.Before(now) {
+	var firstSearch *time.Time
+	err = db.QueryRow(
+		`select min(date_) from searches where domain_id=$1`,
+		domainID,
+	).Scan(&firstSearch)
+	errHndlr(err)
+	if firstSearch != nil {
+		now := time.Now()
+		var fetches int
+		// var monthString string
+
+		date := firstSearch.AddDate(0, 0, 0)
+		for {
+			if date.Before(now) {
+				// fmt.Println(date)
 				err = db.QueryRow(
 					`select count(id) from searches where domain_id=$1 and
 					extract('month' from date_ at time zone 'UTC') = $2 and
 					extract('year' from date_ at time zone 'UTC') = $3`,
-					domainID, int(dt.Month()), dt.Year(),
+					domainID, int(date.Month()), date.Year(),
 				).Scan(&fetches)
-				// fetchKey = fmt.Sprintf("$domainfetches$%v$%v", dt.Year(), int(dt.Month()))
-				// fetchesStr, err = c.Cmd("HGET", fetchKey, domain).Str()
-				// fmt.Println(dt)
+				errHndlr(err)
 				if err == nil {
-					thisYearFetches[fmt.Sprintf("%v", m)] = fetches
-					// fetches, err = strconv.Atoi(fetchesStr)
-					// errHndlr(err)
-					// thisYearFetches[fmt.Sprintf("%v", m)] = fetches
+					monthString := fmt.Sprintf("%v", int(date.Month()))
+					y := fmt.Sprintf("%v", date.Year())
+					if _, ok := allFetches[y]; !ok {
+						allFetches[y] = make(map[string]int)
+					}
+					allFetches[y][monthString] = fetches
 				}
+
+				date = date.AddDate(0, 1, 0)
+			} else {
+				break
 			}
 		}
-		allFetches[fmt.Sprintf("%v", y)] = thisYearFetches
 	}
+
 	output := make(map[string]interface{})
 	output["fetches"] = allFetches
 	output["documents"] = documents
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	renderer.JSON(w, http.StatusOK, output)
-
 }
 
 func flushHandler(w http.ResponseWriter, req *http.Request) {
@@ -756,9 +787,6 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// c, err := redisPool.Get()
-	// errHndlr(err)
-	// defer redisPool.Put(c)
 	var domainID int
 	err := db.QueryRow(
 		`select domain_id from keys where key=$1`, key,
@@ -773,51 +801,6 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 		`delete from titles where domain_id=$1`,
 		domainID,
 	)
-	errHndlr(err)
-
-	encoded := encodeString(domain)
-
-	all, err := c.Cmd("HGETALL", encoded+"$titles").List()
-	errHndlr(err)
-	pipedCommands := 0
-	var encodedURL string
-	for i, each := range all {
-		if i%2 == 0 {
-			encodedURL = each
-		} else {
-			encodedGroup := ""
-			reply := c.Cmd("HGET", encoded+"$groups", encodedURL)
-			if reply.Type != redis.NilReply {
-				encodedGroup, err = reply.Str()
-				errHndlr(err)
-			}
-			prefixes := getPrefixes(each)
-			for _, prefix := range prefixes {
-				if encodedGroup != "" {
-					c.Append("ZREM", encoded+encodedGroup+prefix, encodedURL)
-				} else {
-					c.Append("ZREM", encoded+prefix, encodedURL)
-				}
-				pipedCommands++
-			}
-			c.Append("HDEL", encoded+"$titles", encodedURL)
-			pipedCommands++
-			c.Append("HDEL", encoded+"$urls", encodedURL)
-			pipedCommands++
-			if encodedGroup != "" {
-				c.Append("HDEL", encoded+"$groups", encodedURL)
-				pipedCommands++
-			}
-		}
-	}
-
-	for i := 1; i <= pipedCommands; i++ {
-		if err := c.GetReply().Err; err != nil {
-			errHndlr(err)
-		}
-	}
-
-	err = c.Cmd("HSET", "$domaindocuments", domain, 0).Err
 	errHndlr(err)
 
 	output := map[string]string{"message": "OK"}

@@ -30,6 +30,12 @@ class E2E(unittest.TestCase):
 
         c = self.conn.cursor()
         c.execute("truncate keys, domains, titles, words, searches cascade")
+        c.execute("""
+        SELECT setval('domains_id_seq', 1);
+        SELECT setval('searches_id_seq', 1);
+        SELECT setval('titles_id_seq', 1);
+        SELECT setval('words_id_seq', 1);
+        """)
         self.conn.commit()
 
         self._set_domain_key('xyz123', 'peterbecom')
@@ -178,6 +184,43 @@ class E2E(unittest.TestCase):
                 ]
             }
         )
+
+    def test_unicode(self):
+        r = self.post('/v1', {
+            'url': ' /some/page',
+            'title': u"Blögged about something else",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+
+        r = self.get('/v1?q=about&d=peterbecom')
+        eq_(r.status_code, 200)
+        eq_(
+            r.json(),
+            {
+                'terms': [u'blog'],
+                'results': [
+                    [
+                        u'/some/page',
+                        u'Blögged about something else'
+                    ]
+                ]
+            }
+        )
+        #
+        # r = self.get(u'/v1?q=bl\xf6g&d=peterbecom')
+        # eq_(r.status_code, 200)
+        # eq_(
+        #     r.json(),
+        #     {
+        #         'terms': [u'blög', u'blog'],
+        #         'results': [
+        #             [
+        #                 u'/some/page',
+        #                 u'Blögged about something else'
+        #             ]
+        #         ]
+        #     }
+        # )
 
     def test_unidecode(self):
         r = self.post('/v1', {
@@ -376,7 +419,7 @@ class E2E(unittest.TestCase):
         r = self.delete('/v1', params={
             'url': 'neverheardof',
         }, headers={'Auth-Key': 'xyz123'})
-        eq_(r.status_code, 404)
+        eq_(r.status_code, 204)
 
     def test_delete_row_carefully(self):
         """deleting one item, by URL, shouldn't affect other entries"""
@@ -445,7 +488,7 @@ class E2E(unittest.TestCase):
         stats = r.json()
         eq_(stats['documents'], 0)
         ok_(stats['fetches'].values()[0])
-        
+
         r = self.get('/v1?q=blo&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 0)
@@ -531,23 +574,42 @@ class E2E(unittest.TestCase):
         }, headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 201)
 
+        now = datetime.datetime.utcnow()
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        ok_(stats['documents'], 1)
+        eq_(stats['fetches'], {})
+
         r = self.get('/v1?q=b&d=peterbecom')
         assert r.json()['results']
-        now = datetime.datetime.utcnow()
-        year_key = '$domainfetches$%s' % now.year
-        month_key = year_key + '$%s' % now.month
-        eq_(int(self.c.hget(month_key, 'peterbecom')), 1)
+
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        eq_(stats['fetches'], {
+            str(now.year): {
+                str(now.month): 1
+            }
+        })
 
         r = self.get('/v1?q=bl&d=peterbecom')
         assert r.json()['results']
-        eq_(int(self.c.hget(month_key, 'peterbecom')), 2)
+        r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 200)
+        stats = r.json()
+        eq_(stats['fetches'], {
+            str(now.year): {
+                str(now.month): 2
+            }
+        })
 
     def test_get_stats(self):
         r = self.get('/v1/stats', headers={'Auth-Key': 'xyz123'})
         eq_(r.status_code, 200)
         stats = r.json()
         now = datetime.datetime.utcnow()
-        eq_(stats['fetches'], {str(now.year): {}})
+        eq_(stats['fetches'], {})
         eq_(stats['documents'], 0)
 
         r = self.post('/v1', {
