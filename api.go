@@ -56,6 +56,10 @@ func getPrefixes(title string) []string {
 	return prefixes
 }
 
+func pingHandler(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "pong\n")
+}
+
 type updateForm struct {
 	URL        string
 	Title      string

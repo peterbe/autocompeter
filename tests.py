@@ -43,6 +43,11 @@ class E2E(unittest.TestCase):
         r = self.get('/')
         eq_(r.status_code, 200)
 
+    def test_ping(self):
+        r = self.get('/v1/ping')
+        eq_(r.status_code, 200)
+        eq_(r.content, 'pong\n')
+
     def test_404(self):
         r = self.get('/gobblygook')
         eq_(r.status_code, 404)
@@ -414,7 +419,7 @@ class E2E(unittest.TestCase):
         stats = r.json()
         eq_(stats['documents'], 0)
         ok_(stats['fetches'].values()[0])
-        
+
         r = self.get('/v1?q=blo&d=peterbecom')
         eq_(r.status_code, 200)
         eq_(len(r.json()['results']), 0)

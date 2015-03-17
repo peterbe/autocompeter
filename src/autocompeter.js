@@ -73,6 +73,7 @@
       url: 'https://autocompeter.com/v1',
       domain: location.host,
       groups: null,
+      ping: false
     }, options || {});
 
     options.url += options.url.indexOf('?') > -1 ? '&' : '?';
@@ -86,6 +87,16 @@
       options.url += 'g=' + encodeURIComponent(options.groups) + '&';
     }
     options.url += 'd=' + options.domain + '&q=';
+
+    if (options.ping && window.XMLHttpRequest) {
+      // For the really web performance conscientious implementors,
+      // you can make it send a ping by AJAX first. This will pre-emptively
+      // do a DNS look up and cert checking so that that's taken care of
+      // when you later do the actual AJAX.
+      var ping = new window.XMLHttpRequest();
+      ping.open('GET', options.url.split('?')[0] + '/ping');
+      ping.send();
+    }
 
     var results_ps = [];
     var selected_pointer = 0;
@@ -328,9 +339,11 @@
           req.abort();
         }
         if (window.XMLHttpRequest) { // Mozilla, Safari, ...
-            req = new XMLHttpRequest();
+            req = new window.XMLHttpRequest();
         } else if (window.ActiveXObject) { // IE 8 and older
-            req = new ActiveXObject("Microsoft.XMLHTTP");
+            req = new window.ActiveXObject("Microsoft.XMLHTTP");
+        } else {
+          return;
         }
         req.onreadystatechange = function() {
           if (req.readyState === 4) {
