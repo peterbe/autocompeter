@@ -148,6 +148,15 @@ func (suite *HandlerSuite) TestUpdateAndDelete() {
 	assert.Equal(suite.T(), len(r.Results), 0)
 }
 
+func (suite *HandlerSuite) TestPingHandler() {
+	request, _ := http.NewRequest("GET", "/v1/ping", nil)
+	response := httptest.NewRecorder()
+
+	pingHandler(response, request)
+	assert.Equal(suite.T(), response.Body.String(), "pong\n")
+	assert.Equal(suite.T(), response.Code, http.StatusOK)
+}
+
 // Test the IndexHandler without Redis
 func TestIndexHandlerReturnsWithStatusOK(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/", nil)

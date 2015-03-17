@@ -332,6 +332,7 @@ func main() {
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", indexHandler).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1/ping", pingHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", fetchHandler).Methods("GET", "HEAD")
 	mux.HandleFunc("/v1", updateHandler).Methods("POST", "PUT")
 	mux.HandleFunc("/v1", deleteHandler).Methods("DELETE")

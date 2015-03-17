@@ -42,6 +42,8 @@ and pick up the latest version.
 
 ## Configure the Javascript
 
+### Basics
+
 So, for the widget to work you need to have an `<input type="text">` field
 somewhere. You can put an attributes you like on it like `name="something"`
 or `class="mysearch"` for example. But you need to be able to retrieve it as
@@ -58,6 +60,8 @@ or...
     Autocompeter(document.querySelector('input.mysearch'));
     </script>
 
+### Custom domain
+
 By default it uses the domain that is currently being used. It retrieves this
 by simply using `window.location.host`. If you for example, have a dev or
 staging version of your site but you want to use the production domain, you
@@ -69,6 +73,8 @@ can manually set the domain like this:
     });
     </script>
 
+### Number of results to display
+
 There are a couple of other options you can override. For example the
 maximum number of items to be returned. The default is 10.:
 
@@ -78,6 +84,8 @@ maximum number of items to be returned. The default is 10.:
       number: 20
     });
     </script>
+
+### Limiting results by 'groups'
 
 Another thing you might want to set is the `groups` parameter. Note that
 this can be an array or a comma separated string. Suppose that this information
@@ -103,3 +111,27 @@ for example:
 So, suppose you set `groups: "private,admins"` it will still search on titles
 that were defined with no group. Doing it like this will just return
 potentially more titles.
+
+### Send a 'ping' first
+
+For the web performance freaks.
+
+Quite likely, if a user loads your page there'll be a delay between loading
+the page and until the user reaches for your search widget. We can use this
+"downtime" to prepare for the first Autocompeter search the user is going to
+make. By doing this, by the time your user starts typing and AJAX to
+Autocompeter starts firing the user will have done the DNS lookup and the
+necessary SSL certificate negotiation. The end result is that the widget
+feels much faster to the user.
+
+To enable the "ping pre-flight", set it up like this example:
+
+    <script>
+    Autocompeter(document.querySelector('input.mysearch'), {
+      ping: true
+    });
+    </script>
+
+This will then send an extremely small GET request to
+`https://autocompeter.com/v1/ping`
+as soon as the Autocompeter widget is loaded.
