@@ -379,10 +379,6 @@
     attachHandler(q, 'blur', handleBlur);
     attachHandler(q, 'focus', handleFocus);
 
-    if (q.value.length) {
-      handler();
-    }
-
   }  // end of setUp
 
   window.Autocompeter = setUp;
