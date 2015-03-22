@@ -391,6 +391,10 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	searchedTerms := make([]string, len(terms))
 	copy(searchedTerms, terms)
 
+	// this is only temporary logging
+	ts := time.Now().Unix()
+	fmt.Println(fmt.Sprintf("%v$%v$%v", form.Domain, form.Query, ts))
+
 	// If the queryhas more than one term, e.g "one spo" then we have
 	// completed the first word and don't expect autocompletion on that.
 	// For example, it should now find "one spotless thing" but not
