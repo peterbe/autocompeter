@@ -102,6 +102,20 @@ class E2E(unittest.TestCase):
             }
         )
 
+    def test_search_too_short(self):
+        # r = self.post('/v1', {
+        #     'url': ' /plog/something   ',
+        #     'popularity': "12",
+        #     'title': "This is a blog about something",
+        # }, headers={'Auth-Key': 'xyz123'})
+        # eq_(r.status_code, 201)
+
+        r = self.get('/v1?q=,&d=peterbecom')
+        eq_(
+            r.json(),
+            {'terms': [], 'results': []}
+        )
+
     def test_different_domains(self):
         r = self.post('/v1', {
             'url': ' /plog/something   ',

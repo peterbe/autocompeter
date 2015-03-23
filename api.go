@@ -440,8 +440,11 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		return replies, err
 	}
 
-	replies, err := getReplies(terms, "")
-	errHndlr(err)
+	replies := make([]string, 0)
+	if len(terms) > 0 {
+		replies, err = getReplies(terms, "")
+		errHndlr(err)
+	}
 	var replyStructs []Reply
 	for i, element := range replies {
 		if i%2 == 0 {
