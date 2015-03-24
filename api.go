@@ -22,7 +22,7 @@ func encodeString(str string) string {
 	return base64.URLEncoding.EncodeToString(h.Sum(nil))[0:6]
 }
 
-var junkRegex = regexp.MustCompile(`[\[\](){}"?!,-:;,']`)
+var junkRegex = regexp.MustCompile(`[\[\](){}"?!,:;,'-]`)
 
 func cleanWords(query string) ([]string, bool) {
 	query = junkRegex.ReplaceAllString(query, " ")

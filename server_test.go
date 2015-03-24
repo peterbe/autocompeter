@@ -178,6 +178,20 @@ func TestCleanWordsBasic(t *testing.T) {
 	assert.Equal(t, expanded, false)
 }
 
+func TestCleanWordsNumbers(t *testing.T) {
+	var got, expect []string
+	var expanded bool
+	got, expanded = cleanWords("Monday 2015")
+	expect = []string{"monday", "2015"}
+	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, false)
+	// independent of order
+	got, expanded = cleanWords("2014 Tuesday")
+	expect = []string{"2014", "tuesday"}
+	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, false)
+}
+
 func TestCleanWordsNormalized(t *testing.T) {
 	var got, expect []string
 	var expanded bool
