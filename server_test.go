@@ -204,7 +204,7 @@ func TestCleanWordsNormalized(t *testing.T) {
 func TestCleanWordsCleaned(t *testing.T) {
 	var got, expect []string
 	var expanded bool
-	got, expanded = cleanWords(" word\"[](){}?!,-:;,' ")
+	got, expanded = cleanWords(" word\"[](){}?!.-:;,' ")
 	expect = []string{"word"}
 	assert.Equal(t, got, expect)
 	assert.Equal(t, expanded, false)
