@@ -117,7 +117,7 @@ potentially more titles.
 For the web performance freaks.
 
 Quite likely, if a user loads your page there'll be a delay between loading
-the page and until the user reaches for your search widget. We can use this
+the page and until the user uses your search widget. We can use this brief
 "downtime" to prepare for the first Autocompeter search the user is going to
 make. By doing this, by the time your user starts typing and AJAX to
 Autocompeter starts firing the user will have done the DNS lookup and the

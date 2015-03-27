@@ -88,16 +88,6 @@
     }
     options.url += 'd=' + options.domain + '&q=';
 
-    if (options.ping && window.XMLHttpRequest) {
-      // For the really web performance conscientious implementors,
-      // you can make it send a ping by AJAX first. This will pre-emptively
-      // do a DNS look up and cert checking so that that's taken care of
-      // when you later do the actual AJAX.
-      var ping = new window.XMLHttpRequest();
-      ping.open('GET', options.url.split('?')[0] + '/ping');
-      ping.send();
-    }
-
     var results_ps = [];
     var selected_pointer = 0;
     q.spellcheck = false;
@@ -373,15 +363,32 @@
 
     function handleBlur(event) {
       hint.value = q.value;
-      // necessary so it becomes possible to click the links before they
-      // disappear too quickly
+      // Necessary so it becomes possible to click the links before they
+      // disappear too quickly.
       setTimeout(function() {
         r.style.display = 'none';
       }, 200);
       event.preventDefault();
     }
 
+    // Used to know the search widget has been focused once and only once.
+    var firstFocus = true;
+
     function handleFocus() {
+      if (firstFocus) {
+        // The input field is focussed for the first time in this
+        // session. That gives us an optimization opportunity to
+        // warm up with a quick and simply little ping.
+        if (options.ping && window.XMLHttpRequest) {
+          // For the really web performance conscientious implementors,
+          // you can make it send a ping by AJAX first. This will pre-emptively
+          // do a DNS look up and cert checking so that that's taken care of
+          // when you later do the actual AJAX.
+          var ping = new window.XMLHttpRequest();
+          ping.open('GET', options.url.split('?')[0] + '/ping');
+          ping.send();
+        }
+      }
       if (q.value.length && results_ps.length) {
         r.style.display = 'block';
       }
