@@ -176,7 +176,11 @@
       var hint_candidate = null;
       var hint_candidates = [];
       if (!results.length) {
-        hint.value = q.value;
+        // If there are no results for the current query, we make
+        // sure the is no hint underneath that you can tab-complete
+        // because since there are no results, there's no point
+        // tab completing.
+        hint.value = '';
       }
 
       var search_terms = terms.map(escapeRegExp);
@@ -221,7 +225,12 @@
         hint_candidate = hint_candidates[selected_pointer % hint_candidates.length];
         hint.value = q.value + hint_candidate;
       } else {
-        hint.value = q.value;
+        // If there are no candidates there's no point putting the
+        // hint value to be anything.
+        // Also, this solves the problem that if the q.value is so long
+        // that it's typing exceeds the input box, the text alignment
+        // (assuming the caret is on the right) becomes right aligned.
+        hint.value = '';
       }
     }
 
