@@ -214,6 +214,76 @@ class E2E(unittest.TestCase):
             }
         )
 
+    def test_search_with_apostrophes(self):
+        r = self.post('/v1', {
+            'url': '/some/page',
+            'title': u"The word 'watch'",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+
+        r = self.get('/v1?q=watc&d=peterbecom')
+        eq_(r.status_code, 200)
+        eq_(
+            r.json(),
+            {
+                'terms': ['watc'],
+                'results': [
+                    [
+                        u'/some/page',
+                        u"The word 'watch'"
+                    ]
+                ]
+            }
+        )
+
+        r = self.post('/v1', {
+            'url': '/some/page2',
+            'title': u"At 1 o'clock there's a game",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+        r = self.get('/v1?q=o&d=peterbecom')
+        eq_(r.status_code, 200)
+        eq_(
+            r.json(),
+            {
+                'terms': ['o'],
+                'results': [
+                    [
+                        u'/some/page2',
+                        u"At 1 o'clock there's a game"
+                    ]
+                ]
+            }
+        )
+        r = self.get("/v1?q=o'&d=peterbecom")
+        eq_(r.status_code, 200)
+        eq_(
+            r.json(),
+            {
+                'terms': ['o'],
+                'results': [
+                    [
+                        u'/some/page2',
+                        u"At 1 o'clock there's a game"
+                    ]
+                ]
+            }
+        )
+        r = self.get("/v1?q=o'c&d=peterbecom")
+        eq_(r.status_code, 200)
+        eq_(
+            r.json(),
+            {
+                'terms': ["o'c"],
+                'results': [
+                    [
+                        u'/some/page2',
+                        u"At 1 o'clock there's a game"
+                    ]
+                ]
+            }
+        )
+
     def test_fetch_with_dfferent_n(self):
         self._set_domain_key('xyz123', 'peterbecom')
         for i in range(1, 20):

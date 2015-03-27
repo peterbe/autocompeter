@@ -204,7 +204,7 @@ func TestCleanWordsNormalized(t *testing.T) {
 func TestCleanWordsCleaned(t *testing.T) {
 	var got, expect []string
 	var expanded bool
-	got, expanded = cleanWords(" word\"[](){}?!.-:;,' ")
+	got, expanded = cleanWords(" word\"[](){}?!.-:;, ")
 	expect = []string{"word"}
 	assert.Equal(t, got, expect)
 	assert.Equal(t, expanded, false)
@@ -222,6 +222,19 @@ func TestCleanWordsUnidecoded(t *testing.T) {
 	expect = []string{"trött", "trott"}
 	assert.Equal(t, got, expect)
 	assert.Equal(t, expanded, true)
+}
+
+func TestCleanWordsWithApostraphes(t *testing.T) {
+	var got, expect []string
+	var expanded bool
+	got, expanded = cleanWords("there's something")
+	expect = []string{"there's", "something"}
+	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, false)
+	got, expanded = cleanWords("'there' o'clock")
+	expect = []string{"there", "o'clock"}
+	assert.Equal(t, got, expect)
+	assert.Equal(t, expanded, false)
 }
 
 func TestEncodeString(t *testing.T) {

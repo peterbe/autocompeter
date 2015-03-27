@@ -22,9 +22,16 @@ func encodeString(str string) string {
 	return base64.URLEncoding.EncodeToString(h.Sum(nil))[0:6]
 }
 
-var junkRegex = regexp.MustCompile(`[\[\](){}"\.?!,:;,'-]`)
+// With this we can remove all apostraphes that are used like
+// quotation marks. E.g. "The 'one' word" or "'One' is a word".
+// However, we'll want to keep apostraphes when they're in a word
+// like "they're" or "there's" or "o'clock" as if it's 1 word.
+var quotationMarksRegex = regexp.MustCompile(`\B'|'\B`)
+
+var junkRegex = regexp.MustCompile(`[\[\](){}"\.?!,:;,-]`)
 
 func cleanWords(query string) ([]string, bool) {
+	query = quotationMarksRegex.ReplaceAllString(query, "")
 	query = junkRegex.ReplaceAllString(query, " ")
 	split := strings.Fields(strings.Trim(query, " "))
 	terms := make([]string, len(split))
