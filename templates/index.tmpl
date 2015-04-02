@@ -74,11 +74,15 @@
                     <li>
                         <a href="#docs">Documentation</a>
                     </li>
-                    {{if .Username}}
+
                     <li>
+
+                        {{if .Username}}
                         <a href="#auth">Authenticated</a>
+                        {{else}}
+                        <a href="#login">Login/Signup</a>
+                        {{end}}
                     </li>
-                    {{end}}
                 </ul>
             </div>
             <!-- /.navbar-collapse -->
@@ -300,6 +304,7 @@ Autocompeter(
     <!-- /.content-section-b -->
 
     <a name="auth"></a>
+    <a name="login"></a>
     <div class="content-section-a">
 
         <div class="container">

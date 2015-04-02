@@ -2,10 +2,15 @@
 
 ## Getting an Auth Key
 
-This is under construction. There is currently no automated way to generate
-an auth key.
+To generate an authentication key, you have to go to
+[autocompeter.com](https://autocompeter.com/#login) and sign in using GitHub.
 
-Every Auth Key belongs to one single domain. E.g. `yoursecurekey->www.peterbe.com`.
+Once you've done that you get access to a form where you can type in your
+domain name and generate a key. Copy-n-paste that somewhere secure and use
+when you access private API endpoints.
+
+Every Auth Key belongs to one single domain.
+E.g. `yoursecurekey->www.peterbe.com`.
 
 ## Submitting titles
 
