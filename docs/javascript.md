@@ -116,22 +116,20 @@ potentially more titles.
 
 For the web performance freaks.
 
-Quite likely, if a user loads your page there'll be a delay between loading
-the page and until the user uses your search widget. We can use this brief
-"downtime" to prepare for the first Autocompeter search the user is going to
-make. By doing this, by the time your user starts typing and AJAX to
-Autocompeter starts firing the user will have done the DNS lookup and the
-necessary SSL certificate negotiation. The end result is that the widget
-feels much faster to the user.
+Oftentimes the slowest part of a web service is DNS. The best way to avoid
+that is to "warm up" the connection between users of your site and
+`autocompeter.com`. This includes a first DNS lookup, the SSL certificate
+negotiation and just making a TCP connection.
 
-To enable the "ping pre-flight", set it up like this example:
+As soon as your user puts focus in the search widget you have
+configured a ping is sent to `https://autocompeter.com/v1/ping` and basically
+does nothing but it does prepare the connection for that first typing in
+of the first character which starts the first autocomplete search.
+
+This feature is enabled by default, to undo it set it to false like this:
 
     <script>
     Autocompeter(document.querySelector('input.mysearch'), {
-      ping: true
+      ping: false
     });
     </script>
-
-This will then send an extremely small GET request to
-`https://autocompeter.com/v1/ping`
-as soon as the Autocompeter widget is loaded.

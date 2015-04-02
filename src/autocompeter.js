@@ -73,7 +73,7 @@
       url: 'https://autocompeter.com/v1',
       domain: location.host,
       groups: null,
-      ping: false
+      ping: true,
     }, options || {});
 
     options.url += options.url.indexOf('?') > -1 ? '&' : '?';
