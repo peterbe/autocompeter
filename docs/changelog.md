@@ -1,6 +1,12 @@
 # Changelog
 
 
+## 1.1.8
+
+ * Don't be too eager to re-display results during typing during
+   waiting for the AJAX request to finish. Resolves the problem of
+   possible "flickering".
+
 ## 1.1.7
 
  * Re-release for minified dist files.

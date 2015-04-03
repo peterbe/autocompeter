@@ -138,13 +138,13 @@
     }
 
     function filterResults(results, terms) {
-      // return a new array where all results are matched
-      // on all of the terms
+      // Return a new array where all results are matched
+      // on all of the terms.
       var new_results = [];
       var search_terms = terms.map(escapeRegExp);
       var re = new RegExp('\\b(' + search_terms.join('|') + ')', 'gi');
       for (var i=0, len=results.length; i < len; i++) {
-        if (re.test(results[i][1])) {
+        if (results[i][1].search(re) > -1) {
           new_results.push(results[i]);
         }
       }
@@ -152,10 +152,17 @@
     }
 
     var results = null;
+    var preAjaxDisplayTimer = null;
     var terms;
 
     function displayResults(preAjax) {
       preAjax = preAjax || false;
+      if (!preAjax && preAjaxDisplayTimer) {
+        // This function has been called because we have new results.
+        // If we had started a whilst-waiting-for-ajax filtering based
+        // on what little we have, then we can now kill that effort.
+        window.clearTimeout(preAjaxDisplayTimer);
+      }
       var i, len;
       if (results === null) return;
       if (preAjax) {
@@ -323,7 +330,11 @@
           // display the results again because the displays are shown
           // but the typed value is not visible
           terms = q.value.trim().split(/\s+/);
-          displayResults(true);
+          preAjaxDisplayTimer = window.setTimeout(function() {
+            // now display results PRE-ajax
+            displayResults(true);
+          }, 150);
+
         }
       }
       // new character, let's reset the selected_pointer
