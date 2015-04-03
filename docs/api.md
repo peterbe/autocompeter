@@ -174,7 +174,7 @@ HTTP POST or a HTTP PUT.
 
 Here's an example using curl:
 
-    url -X POST -H "Auth-Key: 3b14d7c280bf525b779d0a01c601fe44" \
+    curl -X POST -H "Auth-Key: 3b14d7c280bf525b779d0a01c601fe44" \
     -d '{"documents": [{"url":"/url", "title":"My Title", "popularity":1001}]}' \
     https://autocompeter.com/v1/bulk
 
