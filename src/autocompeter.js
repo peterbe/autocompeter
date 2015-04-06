@@ -407,6 +407,7 @@
           var ping = new window.XMLHttpRequest();
           ping.open('GET', options.url.split('?')[0] + '/ping');
           ping.send();
+          firstFocus = false;
         }
       }
       if (q.value.length && results_ps.length) {
