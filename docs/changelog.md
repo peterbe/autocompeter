@@ -1,6 +1,10 @@
 # Changelog
 
 
+## 1.1.11
+
+  * Same as 1.1.10. Just mismanaged the git command to tag the version.
+
 ## 1.1.10
 
   * Version number in minified assets.
