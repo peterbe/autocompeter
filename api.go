@@ -65,6 +65,7 @@ func getPrefixes(title string) []string {
 }
 
 func pingHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	fmt.Fprintf(w, "pong\n")
 }
 
