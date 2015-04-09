@@ -47,6 +47,7 @@ class E2E(unittest.TestCase):
         r = self.get('/v1/ping')
         eq_(r.status_code, 200)
         eq_(r.content, 'pong\n')
+        eq_(r.headers['Access-Control-Allow-Origin'], '*')
 
     def test_404(self):
         r = self.get('/gobblygook')
@@ -101,6 +102,7 @@ class E2E(unittest.TestCase):
                 ]
             }
         )
+        eq_(r.headers['Access-Control-Allow-Origin'], '*')
 
     def test_search_on_numbers(self):
         r = self.post('/v1', {
