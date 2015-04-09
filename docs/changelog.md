@@ -1,10 +1,14 @@
 # Changelog
 
 
+## 1.1.10
+
+  * Version number in minified assets.
+
 ## 1.1.9
 
   * Ping only on the first onfocus per session.
-  
+
 ## 1.1.8
 
  * Don't be too eager to re-display results during typing during
