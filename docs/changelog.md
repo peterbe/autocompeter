@@ -1,6 +1,11 @@
 # Changelog
 
 
+## 1.1.12
+
+  * Highlight the whole word in the results.
+    See [this blog post](http://www.peterbe.com/plog/match-the-whole-word).
+
 ## 1.1.11
 
   * Same as 1.1.10. Just mismanaged the git command to tag the version.

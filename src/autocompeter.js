@@ -124,7 +124,7 @@
     }
     function highlightText(text) {
       var search_terms = terms.map(escapeRegExp);
-      var re = new RegExp('\\b(' + search_terms.join('|') + ')', 'gi');
+      var re = new RegExp('\\b((' + search_terms.join('|') + ')[\\w\']*)', 'gi');
       return text.replace(re, '<b>$1</b>');
     }
 
