@@ -63,22 +63,22 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 			errHndlr(err)
 			defer redisPool.CarefullyPut(c, &err)
 
-			userdomainsKey := fmt.Sprintf("$userdomains$%v", cookie.Value)
+			userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
 			replies, err := c.Cmd("SMEMBERS", userdomainsKey).List()
 			errHndlr(err)
 
-			domains := make([]domainRow, len(replies))
+			var domains []domainRow
 
 			var domain string
-			for i, key := range replies {
+			for _, key := range replies {
 				reply := c.Cmd("HGET", "$domainkeys", key)
 				if reply.Type != redis.NilReply {
 					domain, err = reply.Str()
 					errHndlr(err)
-					domains[i] = domainRow{
+					domains = append(domains, domainRow{
 						Key:    key,
 						Domain: domain,
-					}
+					})
 				}
 			}
 			context["domains"] = domains
@@ -180,7 +180,7 @@ func domainkeyNewHandler(w http.ResponseWriter, req *http.Request) {
 				defer redisPool.CarefullyPut(c, &err)
 
 				key := randString(24)
-				userdomainsKey := fmt.Sprintf("$userdomains$%v", cookie.Value)
+				userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
 				err = c.Cmd("SADD", userdomainsKey, key).Err
 				errHndlr(err)
 				err = c.Cmd("HSET", "$domainkeys", key, domain).Err
@@ -205,7 +205,7 @@ func domainkeyDeleteHandler(w http.ResponseWriter, req *http.Request) {
 				errHndlr(err)
 				defer redisPool.CarefullyPut(c, &err)
 
-				userdomainsKey := fmt.Sprintf("$userdomains$%v", cookie.Value)
+				userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
 				err = c.Cmd("SREM", userdomainsKey, key).Err
 				errHndlr(err)
 				err = c.Cmd("HDEL", "$domainkeys", key).Err
