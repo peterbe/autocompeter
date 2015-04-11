@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/codegangsta/negroni"
+	"github.com/deferpanic/deferclient/deferstats"
 	"github.com/fzzy/radix/extra/pool"
 	"github.com/fzzy/radix/redis"
 	"github.com/google/go-github/github"
@@ -10,6 +11,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/namsral/flag"
 	"github.com/unrolled/render"
+	// "github.com/deferpanic/deferclient/errors"
 	"golang.org/x/oauth2"
 	githuboauth "golang.org/x/oauth2/github"
 	"math/rand"
@@ -218,6 +220,12 @@ func domainkeyDeleteHandler(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "/#auth", http.StatusFound)
 }
 
+// This is just a temporary thing to try out deferpanic.com
+// and this can be removed once I know it works.
+func errorTestHandler(w http.ResponseWriter, req *http.Request) {
+	panic("Something terrible happened")
+}
+
 var (
 	redisPool    *pool.Pool
 	procs        int
@@ -252,6 +260,7 @@ func main() {
 		clientSecret  = ""
 		hashKey       = "randomishstringthatsi32charslong"
 		blockKey      = "randomishstringthatsi32charslong"
+		deferPanicKey = ""
 	)
 	flag.IntVar(&port, "port", port, "Port to start the server on")
 	flag.IntVar(&procs, "procs", 1, "Number of CPU processors (0 to use max)")
@@ -278,7 +287,15 @@ func main() {
 	flag.StringVar(
 		&blockKey, "blockKey", blockKey,
 		"Block key to encrypt cookie values")
+	flag.StringVar(
+		&deferPanicKey, "deferPanicKey", deferPanicKey,
+		"Auth key for deferpanic.com")
 	flag.Parse()
+
+	if deferPanicKey != "" {
+		deferstats.Token = deferPanicKey
+		go deferstats.CaptureStats()
+	}
 
 	oauthConf.ClientID = clientID
 	oauthConf.ClientSecret = clientSecret
@@ -331,19 +348,20 @@ func main() {
 	errHndlr(err)
 
 	mux := mux.NewRouter()
-	mux.HandleFunc("/", indexHandler).Methods("GET", "HEAD")
-	mux.HandleFunc("/v1/ping", pingHandler).Methods("GET", "HEAD")
-	mux.HandleFunc("/v1", fetchHandler).Methods("GET", "HEAD")
-	mux.HandleFunc("/v1", updateHandler).Methods("POST", "PUT")
-	mux.HandleFunc("/v1", deleteHandler).Methods("DELETE")
-	mux.HandleFunc("/v1/stats", privateStatsHandler).Methods("GET")
-	mux.HandleFunc("/v1/flush", flushHandler).Methods("DELETE")
-	mux.HandleFunc("/v1/bulk", bulkHandler).Methods("POST", "PUT")
-	mux.HandleFunc("/login", handleGitHubLogin).Methods("GET")
-	mux.HandleFunc("/logout", logoutHandler).Methods("GET", "POST")
-	mux.HandleFunc("/github_oauth_cb", handleGitHubCallback).Methods("GET")
-	mux.HandleFunc("/domainkeys/new", domainkeyNewHandler).Methods("POST")
-	mux.HandleFunc("/domainkeys/delete", domainkeyDeleteHandler).Methods("POST")
+	mux.HandleFunc("/", deferstats.HTTPHandler(indexHandler)).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1/ping", deferstats.HTTPHandler(pingHandler)).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1", deferstats.HTTPHandler(fetchHandler)).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1", deferstats.HTTPHandler(updateHandler)).Methods("POST", "PUT")
+	mux.HandleFunc("/v1", deferstats.HTTPHandler(deleteHandler)).Methods("DELETE")
+	mux.HandleFunc("/v1/stats", deferstats.HTTPHandler(privateStatsHandler)).Methods("GET")
+	mux.HandleFunc("/v1/flush", deferstats.HTTPHandler(flushHandler)).Methods("DELETE")
+	mux.HandleFunc("/v1/bulk", deferstats.HTTPHandler(bulkHandler)).Methods("POST", "PUT")
+	mux.HandleFunc("/login", deferstats.HTTPHandler(handleGitHubLogin)).Methods("GET")
+	mux.HandleFunc("/logout", deferstats.HTTPHandler(logoutHandler)).Methods("GET", "POST")
+	mux.HandleFunc("/github_oauth_cb", deferstats.HTTPHandler(handleGitHubCallback)).Methods("GET")
+	mux.HandleFunc("/domainkeys/new", deferstats.HTTPHandler(domainkeyNewHandler)).Methods("POST")
+	mux.HandleFunc("/domainkeys/delete", deferstats.HTTPHandler(domainkeyDeleteHandler)).Methods("POST")
+	mux.HandleFunc("/errortest", deferstats.HTTPHandler(errorTestHandler)).Methods("GET")
 
 	n := negroni.Classic()
 
