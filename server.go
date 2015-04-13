@@ -220,12 +220,6 @@ func domainkeyDeleteHandler(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "/#auth", http.StatusFound)
 }
 
-// This is just a temporary thing to try out deferpanic.com
-// and this can be removed once I know it works.
-func errorTestHandler(w http.ResponseWriter, req *http.Request) {
-	panic("Something terrible happened")
-}
-
 var (
 	redisPool    *pool.Pool
 	procs        int
@@ -361,7 +355,6 @@ func main() {
 	mux.HandleFunc("/github_oauth_cb", deferstats.HTTPHandler(handleGitHubCallback)).Methods("GET")
 	mux.HandleFunc("/domainkeys/new", deferstats.HTTPHandler(domainkeyNewHandler)).Methods("POST")
 	mux.HandleFunc("/domainkeys/delete", deferstats.HTTPHandler(domainkeyDeleteHandler)).Methods("POST")
-	mux.HandleFunc("/errortest", deferstats.HTTPHandler(errorTestHandler)).Methods("GET")
 
 	n := negroni.Classic()
 
