@@ -163,6 +163,7 @@ var letters = []rune(
 )
 
 func randString(n int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
