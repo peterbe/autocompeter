@@ -15,7 +15,7 @@
         "report": "https://github.com/peterbe/autocompeter/issues/new"
     },
     "urls": {
-        "prod": "https://autocompeter.com",
+        "prod": "https://autocompeter.com"
     },
     "keywords": [
         "go",
