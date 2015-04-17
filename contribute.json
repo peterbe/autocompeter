@@ -1,0 +1,26 @@
+{
+    "name": "Autocompeter",
+    "description": "A really fast AJAX autocomplete service and widget",
+    "repository": {
+        "url": "https://github.com/peterbe/autocompeter",
+        "license": "BSD",
+        "tests": "https://travis-ci.org/peterbe/autocompeter/"
+    },
+    "participate": {
+        "home": "https://autocompeter.com",
+        "docs": "http://autocompeter.readthedocs.org/"
+    },
+    "bugs": {
+        "list": "https://github.com/peterbe/autocompeter/issues",
+        "report": "https://github.com/peterbe/autocompeter/issues/new"
+    },
+    "urls": {
+        "prod": "https://autocompeter.com",
+    },
+    "keywords": [
+        "go",
+        "redis",
+        "javascript",
+        "scss"
+    ]
+}
