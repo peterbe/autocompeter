@@ -287,10 +287,12 @@ func main() {
 		"Auth key for deferpanic.com")
 	flag.Parse()
 
-	if deferPanicKey != "" {
-		deferstats.Token = deferPanicKey
-		go deferstats.CaptureStats()
-	}
+	dfs := deferstats.NewClient(deferPanicKey)
+	go dfs.CaptureStats()
+	// if deferPanicKey != "" {
+	// 	dfs := deferstats.NewClient(deferPanicKey)
+	// 	go dfs.CaptureStats()
+	// }
 
 	oauthConf.ClientID = clientID
 	oauthConf.ClientSecret = clientSecret
@@ -343,19 +345,19 @@ func main() {
 	errHndlr(err)
 
 	mux := mux.NewRouter()
-	mux.HandleFunc("/", deferstats.HTTPHandler(indexHandler)).Methods("GET", "HEAD")
-	mux.HandleFunc("/v1/ping", deferstats.HTTPHandler(pingHandler)).Methods("GET", "HEAD")
-	mux.HandleFunc("/v1", deferstats.HTTPHandler(fetchHandler)).Methods("GET", "HEAD")
-	mux.HandleFunc("/v1", deferstats.HTTPHandler(updateHandler)).Methods("POST", "PUT")
-	mux.HandleFunc("/v1", deferstats.HTTPHandler(deleteHandler)).Methods("DELETE")
-	mux.HandleFunc("/v1/stats", deferstats.HTTPHandler(privateStatsHandler)).Methods("GET")
-	mux.HandleFunc("/v1/flush", deferstats.HTTPHandler(flushHandler)).Methods("DELETE")
-	mux.HandleFunc("/v1/bulk", deferstats.HTTPHandler(bulkHandler)).Methods("POST", "PUT")
-	mux.HandleFunc("/login", deferstats.HTTPHandler(handleGitHubLogin)).Methods("GET")
-	mux.HandleFunc("/logout", deferstats.HTTPHandler(logoutHandler)).Methods("GET", "POST")
-	mux.HandleFunc("/github_oauth_cb", deferstats.HTTPHandler(handleGitHubCallback)).Methods("GET")
-	mux.HandleFunc("/domainkeys/new", deferstats.HTTPHandler(domainkeyNewHandler)).Methods("POST")
-	mux.HandleFunc("/domainkeys/delete", deferstats.HTTPHandler(domainkeyDeleteHandler)).Methods("POST")
+	mux.HandleFunc("/", dfs.HTTPHandler(indexHandler)).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1/ping", dfs.HTTPHandler(pingHandler)).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1", dfs.HTTPHandler(fetchHandler)).Methods("GET", "HEAD")
+	mux.HandleFunc("/v1", dfs.HTTPHandler(updateHandler)).Methods("POST", "PUT")
+	mux.HandleFunc("/v1", dfs.HTTPHandler(deleteHandler)).Methods("DELETE")
+	mux.HandleFunc("/v1/stats", dfs.HTTPHandler(privateStatsHandler)).Methods("GET")
+	mux.HandleFunc("/v1/flush", dfs.HTTPHandler(flushHandler)).Methods("DELETE")
+	mux.HandleFunc("/v1/bulk", dfs.HTTPHandler(bulkHandler)).Methods("POST", "PUT")
+	mux.HandleFunc("/login", dfs.HTTPHandler(handleGitHubLogin)).Methods("GET")
+	mux.HandleFunc("/logout", dfs.HTTPHandler(logoutHandler)).Methods("GET", "POST")
+	mux.HandleFunc("/github_oauth_cb", dfs.HTTPHandler(handleGitHubCallback)).Methods("GET")
+	mux.HandleFunc("/domainkeys/new", dfs.HTTPHandler(domainkeyNewHandler)).Methods("POST")
+	mux.HandleFunc("/domainkeys/delete", dfs.HTTPHandler(domainkeyDeleteHandler)).Methods("POST")
 
 	n := negroni.Classic()
 
