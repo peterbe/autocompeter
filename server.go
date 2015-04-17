@@ -46,6 +46,30 @@ type domainRow struct {
 	Domain string
 }
 
+func getUsername(req *http.Request) string {
+	var username string
+	cookie, err := req.Cookie("username")
+	if err == nil {
+		sCookie.Decode("username", cookie.Value, &username)
+		// if err = sCookie.Decode("username", cookie.Value, &username); err == nil {
+		// 	c, err := redisPool.Get()
+		// 	errHndlr(err)
+		// 	defer redisPool.CarefullyPut(c, &err)
+		// 	fmt.Println("You are signed in")
+		// 	reply := c.Cmd("HGET", "$emails", username)
+		// 	if reply.Type != redis.NilReply {
+		// 		var email string
+		// 		email, err = reply.Str()
+		// 		errHndlr(err)
+		// 		fmt.Println("email", email)
+		// 	} else {
+		// 		username = ""
+		// 	}
+		// }
+	}
+	return username
+}
+
 func indexHandler(w http.ResponseWriter, req *http.Request) {
 	context := map[string]interface{}{
 		"staticPrefix": staticPrefix,
@@ -54,37 +78,33 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 		"domains":      make([]string, 0),
 	}
 
-	cookie, err := req.Cookie("username")
-	if err == nil {
-		var username string
-		if err = sCookie.Decode("username", cookie.Value, &username); err == nil {
-			// Yay! You're signed in!
+	username := getUsername(req)
+	if username != "" {
+		// Yay! You're signed in!
+		context["Username"] = username
+		c, err := redisPool.Get()
+		errHndlr(err)
+		defer redisPool.CarefullyPut(c, &err)
 
-			context["Username"] = username
-			c, err := redisPool.Get()
-			errHndlr(err)
-			defer redisPool.CarefullyPut(c, &err)
+		userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
+		replies, err := c.Cmd("SMEMBERS", userdomainsKey).List()
+		errHndlr(err)
 
-			userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
-			replies, err := c.Cmd("SMEMBERS", userdomainsKey).List()
-			errHndlr(err)
+		var domains []domainRow
 
-			var domains []domainRow
-
-			var domain string
-			for _, key := range replies {
-				reply := c.Cmd("HGET", "$domainkeys", key)
-				if reply.Type != redis.NilReply {
-					domain, err = reply.Str()
-					errHndlr(err)
-					domains = append(domains, domainRow{
-						Key:    key,
-						Domain: domain,
-					})
-				}
+		var domain string
+		for _, key := range replies {
+			reply := c.Cmd("HGET", "$domainkeys", key)
+			if reply.Type != redis.NilReply {
+				domain, err = reply.Str()
+				errHndlr(err)
+				domains = append(domains, domainRow{
+					Key:    key,
+					Domain: domain,
+				})
 			}
-			context["domains"] = domains
 		}
+		context["domains"] = domains
 	}
 	// this assumes there's a `templates/index.tmpl` file
 	renderer.HTML(w, http.StatusOK, "index", context)
@@ -138,8 +158,18 @@ func handleGitHubCallback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Printf("Logged in as GitHub user: %s\n", *user.Login)
-	// fmt.Printf("Logged in as GitHub user: %s\n", *user)
+	fmt.Printf("Logged in as GitHub user: %s (%s)\n", *user.Login, *user.Email)
+	// fmt.Println(user)
+	// store the email
+	c, err := redisPool.Get()
+	errHndlr(err)
+	defer redisPool.CarefullyPut(c, &err)
+
+	err = c.Cmd("SADD", "$usernames", *user.Login).Err
+	errHndlr(err)
+	err = c.Cmd("HSET", "$emails", *user.Login, *user.Email).Err
+	errHndlr(err)
+
 	encoded, err := sCookie.Encode("username", *user.Login)
 	errHndlr(err)
 	expire := time.Now().AddDate(0, 0, 1) // how long is this?
@@ -174,21 +204,18 @@ func randString(n int) string {
 func domainkeyNewHandler(w http.ResponseWriter, req *http.Request) {
 	domain := strings.Trim(req.FormValue("domain"), " ")
 	if domain != "" {
-		cookie, err := req.Cookie("username")
-		if err == nil {
-			var username string
-			if err = sCookie.Decode("username", cookie.Value, &username); err == nil {
-				c, err := redisPool.Get()
-				errHndlr(err)
-				defer redisPool.CarefullyPut(c, &err)
+		username := getUsername(req)
+		if username != "" {
+			c, err := redisPool.Get()
+			errHndlr(err)
+			defer redisPool.CarefullyPut(c, &err)
 
-				key := randString(24)
-				userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
-				err = c.Cmd("SADD", userdomainsKey, key).Err
-				errHndlr(err)
-				err = c.Cmd("HSET", "$domainkeys", key, domain).Err
-				errHndlr(err)
-			}
+			key := randString(24)
+			userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
+			err = c.Cmd("SADD", userdomainsKey, key).Err
+			errHndlr(err)
+			err = c.Cmd("HSET", "$domainkeys", key, domain).Err
+			errHndlr(err)
 		}
 	}
 
@@ -199,25 +226,20 @@ func domainkeyNewHandler(w http.ResponseWriter, req *http.Request) {
 func domainkeyDeleteHandler(w http.ResponseWriter, req *http.Request) {
 	key := strings.Trim(req.FormValue("key"), " ")
 	if key != "" {
-		cookie, err := req.Cookie("username")
-		if err == nil {
-			var username string
-			if err = sCookie.Decode("username", cookie.Value, &username); err == nil {
-				// Yay! You're signed in!
-				c, err := redisPool.Get()
-				errHndlr(err)
-				defer redisPool.CarefullyPut(c, &err)
+		username := getUsername(req)
+		if username != "" {
+			// Yay! You're signed in!
+			c, err := redisPool.Get()
+			errHndlr(err)
+			defer redisPool.CarefullyPut(c, &err)
 
-				userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
-				err = c.Cmd("SREM", userdomainsKey, key).Err
-				errHndlr(err)
-				err = c.Cmd("HDEL", "$domainkeys", key).Err
-				errHndlr(err)
-			} // else, we should yield some sort of 403 message maybe
-
-		}
+			userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
+			err = c.Cmd("SREM", userdomainsKey, key).Err
+			errHndlr(err)
+			err = c.Cmd("HDEL", "$domainkeys", key).Err
+			errHndlr(err)
+		} // else, we should yield some sort of 403 message maybe
 	}
-
 	http.Redirect(w, req, "/#auth", http.StatusFound)
 }
 
