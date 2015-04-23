@@ -111,9 +111,10 @@ _json_files = glob.glob(os.path.join(_here, '*.json'))
 @click.option('--domain', default='autocompeter.com')
 @click.option('--dataset', default='blogposts.json')
 @click.option('--flush', default=False, is_flag=True)
-@click.option('--bulk', default=True, is_flag=True)
-def run(database, destination, domain, dataset, flush=False, bulk=True):
+@click.option('--no-bulk', default=False, is_flag=True)
+def run(database, destination, domain, dataset, flush=False, no_bulk=True):
     # print (database, domain, flush)
+    bulk = not no_bulk
     for filename in _json_files:
         if os.path.basename(filename) == dataset:
             jsonfile = filename
