@@ -17,6 +17,79 @@ import (
 	"time"
 )
 
+// Consider refactor this from
+// https://code.google.com/p/spell-correct-in-go/source/browse/trunk/spell-correct.go
+func editOnes(word string) []string {
+	const alphabet = "abcdefghijklmnopqrstuvwxyz"
+	set := make(map[string]struct{})
+	// n := len(word)
+
+	join := func(slice []string) string {
+		return strings.Join(slice, "")
+	}
+
+	splitted := strings.Split(word, "")
+	splittedLength := len(splitted)
+	var variant string
+	alphabetSplitted := strings.Split(alphabet, "")
+
+	// deletion
+	for i := range splitted {
+		// fmt.Println(i, e)
+		// variant = strings.Join(splitted[0:i], "")
+		variant = join(splitted[0:i])
+		variant += join(splitted[i+1 : splittedLength])
+		set[variant] = struct{}{}
+	}
+
+	// transposition
+	for i := range splitted {
+		if i < splittedLength-1 {
+			variant = join(splitted[0:i])
+			variant += join(splitted[i+1 : i+2])
+			variant += join(splitted[i : i+1])
+			variant += join(splitted[i+2 : splittedLength])
+
+			// variant += strings.Join()
+			// fmt.Println(i, splittedLength)
+			// fmt.Println(variant)
+			set[variant] = struct{}{}
+		}
+	}
+
+	// replaces
+	for i := range splitted {
+		if i < splittedLength-1 {
+			for j := range alphabetSplitted {
+				variant = join(splitted[0:i])
+				variant += join(alphabetSplitted[j : j+1])
+				variant += join(splitted[i+1 : splittedLength])
+				set[variant] = struct{}{}
+			}
+		}
+
+	}
+
+	// insertion
+	for i := range splitted {
+		for j := range alphabetSplitted {
+			variant = join(splitted[0:i])
+			variant += join(alphabetSplitted[j : j+1])
+			variant += join(splitted[i:splittedLength])
+			set[variant] = struct{}{}
+		}
+	}
+
+	// return as a list
+	list := make([]string, len(set))
+	i := 0
+	for k := range set {
+		list[i] = k
+		i++
+	}
+	return list
+}
+
 func encodeString(str string) string {
 	h := md5.New()
 	h.Write([]byte(str))
@@ -50,17 +123,39 @@ func cleanWords(query string) ([]string, bool) {
 	return terms, unidecodeExpanded
 }
 
-func getPrefixes(title string) []string {
-	var prefixes []string
+// func getPrefixes(title string) []string {
+// 	var prefixes []string
+// 	words, _ := cleanWords(title)
+// 	for _, word := range words {
+// 		for i := range word {
+// 			if i > 0 {
+// 				prefixes = append(prefixes, word[0:i])
+// 			}
+// 		}
+// 		prefixes = append(prefixes, word) // should we keep this?!
+// 		prefixes = append(prefixes, word+"$")
+// 	}
+// 	return prefixes
+// }
+
+type prefix struct {
+	start string
+	term  string
+}
+
+func getPrefixes(title string) []prefix {
+	//var prefixes []string
+	var prefixes []prefix
 	words, _ := cleanWords(title)
 	for _, word := range words {
 		for i := range word {
 			if i > 0 {
-				prefixes = append(prefixes, word[0:i])
+				//prefixes = append(prefixes, word[0:i])
+				prefixes = append(prefixes, prefix{word[0:i], word})
 			}
 		}
-		prefixes = append(prefixes, word) // should we keep this?!
-		prefixes = append(prefixes, word+"$")
+		prefixes = append(prefixes, prefix{word, word}) // should we keep this?!
+		prefixes = append(prefixes, prefix{word + "$", word})
 	}
 	return prefixes
 }
@@ -161,14 +256,17 @@ func insertDocument(domain, title, url, group string, popularity float64, c *red
 	}
 
 	pipedCommands := 0
+	var encodedURLAndTerm string
 	for _, prefix := range getPrefixes(title) {
+		encodedURLAndTerm = fmt.Sprintf("%v**%v", encodedURL, prefix.term)
 		if group != "" {
 			encodedGroup := encodeString(group)
-			c.Append("ZADD", encoded+encodedGroup+prefix, popularity, encodedURL)
+			c.Append("ZADD", encoded+encodedGroup+prefix.start, popularity, encodedURLAndTerm)
 			c.Append("HSET", encoded+"$groups", encodedURL, encodedGroup)
 			pipedCommands++
 		} else {
-			c.Append("ZADD", encoded+prefix, popularity, encodedURL)
+			// fmt.Println("1 ZADD", encoded+prefix.start, popularity, encodedURLAndTerm)
+			c.Append("ZADD", encoded+prefix.start, popularity, encodedURLAndTerm)
 		}
 		pipedCommands++
 	}
@@ -320,15 +418,16 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	prefixes := getPrefixes(title)
 	pipedCommands := 0
+	var encodedURLAndTerm string
 	for _, prefix := range prefixes {
+		encodedURLAndTerm = fmt.Sprintf("%v**%v", encodedURL, prefix.term)
 		if encodedGroup != "" {
-			c.Append("ZREM", encoded+encodedGroup+prefix, encodedURL)
+			c.Append("ZREM", encoded+encodedGroup+prefix.start, encodedURLAndTerm)
 			c.Append("HDEL", encoded+"$groups", encodedURL)
 			pipedCommands++
 		} else {
-			c.Append("ZREM", encoded+prefix, encodedURL)
+			c.Append("ZREM", encoded+prefix.start, encodedURLAndTerm)
 		}
-
 		pipedCommands++
 	}
 
@@ -350,6 +449,7 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 type Reply struct {
 	URL   string
 	Score string
+	Term  string
 }
 
 type fetchForm struct {
@@ -399,8 +499,9 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 
 	form.Query = strings.Trim(form.Query, " ")
 	terms, unidecodeExpanded := cleanWords(form.Query)
-	searchedTerms := make([]string, len(terms))
-	copy(searchedTerms, terms)
+	// searchedTerms := make([]string, len(terms))
+	// copy(searchedTerms, terms)
+	var searchedTerms []string
 
 	// this is only temporary logging
 	ts := time.Now().Unix()
@@ -430,7 +531,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	err = c.Cmd("HINCRBY", thisMonthFetchesKey, form.Domain, 1).Err
 	errorHandler(err)
 
-	getReplies := func(terms []string, group string) ([]string, error) {
+	getReplies := func(terms []string, group string, useUnion bool) ([]string, error) {
 		encodedTerms := make([]string, len(terms))
 		encodedGroup := ""
 		if group != "" {
@@ -440,8 +541,15 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 			encodedTerms[i] = encoded + encodedGroup + term
 		}
 		var replies []string
+		fmt.Println("encodedTerms", encodedTerms)
 		if len(terms) > 1 {
-			c.Append("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
+			if useUnion {
+				// fmt.Println("ZUNIONSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
+				c.Append("ZUNIONSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
+			} else {
+				// fmt.Println("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
+				c.Append("ZINTERSTORE", "$tmp", len(terms), encodedTerms, "AGGREGATE", "max")
+			}
 			c.Append("ZREVRANGE", "$tmp", 0, n-1, "WITHSCORES")
 			c.GetReply() // the ZINTERSTORE
 			replies, err = c.GetReply().List()
@@ -453,25 +561,54 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 
 	var replies []string
 	if len(terms) > 0 {
-		replies, err = getReplies(terms, "")
+		replies, err = getReplies(terms, "", true)
 		errorHandler(err)
+		fmt.Println("REPLIES", replies)
 	}
 	var replyStructs []Reply
+	var URL string
+	var termUsed string
+	var splitted []string
 	for i, element := range replies {
 		if i%2 == 0 {
-			replyStructs = append(replyStructs, Reply{element, replies[i+1]})
+			splitted = strings.SplitN(element, "**", 2)
+			URL = splitted[0]
+			termUsed = splitted[1]
+			replyStructs = append(replyStructs, Reply{URL, replies[i+1], termUsed})
+			searchedTerms = append(searchedTerms, termUsed)
 		}
 	}
-	for _, group := range groups {
-		replies, err = getReplies(terms, group)
+	if len(replyStructs) == 0 && len(terms) == 1 && len(terms[0]) > 2 && len(terms[0]) <= 6 {
+		variations := editOnes(terms[0])
+		fmt.Println(variations)
+		replies, err = getReplies(variations, "", true)
 		errorHandler(err)
 		for i, element := range replies {
 			if i%2 == 0 {
-				replyStructs = append(replyStructs, Reply{element, replies[i+1]})
+				splitted = strings.SplitN(element, "**", 2)
+				URL = splitted[0]
+				termUsed = splitted[1]
+				replyStructs = append(replyStructs, Reply{URL, replies[i+1], termUsed})
+				searchedTerms = append(searchedTerms, termUsed)
 			}
 		}
 	}
-	RemoveDuplicates := func(xs *[]Reply) {
+
+	for _, group := range groups {
+		replies, err = getReplies(terms, group, true)
+		errorHandler(err)
+		for i, element := range replies {
+			if i%2 == 0 {
+				splitted = strings.SplitN(element, "**", 2)
+				URL = splitted[0]
+				termUsed = splitted[1]
+				replyStructs = append(replyStructs, Reply{URL, replies[i+1], termUsed})
+				searchedTerms = append(searchedTerms, termUsed)
+			}
+		}
+	}
+	// fmt.Println("replyStructs", replyStructs)
+	RemoveDuplicateReplyStructs := func(xs *[]Reply) {
 		found := make(map[string]bool)
 		j := 0
 		for i, x := range *xs {
@@ -483,7 +620,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		}
 		*xs = (*xs)[:j]
 	}
-	RemoveDuplicates(&replyStructs)
+	RemoveDuplicateReplyStructs(&replyStructs)
 	if len(replyStructs) > n {
 		replyStructs = replyStructs[:n]
 	}
@@ -513,8 +650,27 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	rows = rows[:len(titles)]
 
+	RemoveDuplicatesStrings := func(xs *[]string) {
+		found := make(map[string]bool)
+		j := 0
+		for i, x := range *xs {
+			if !found[x] {
+				found[x] = true
+				(*xs)[j] = (*xs)[i]
+				j++
+			}
+		}
+		*xs = (*xs)[:j]
+	}
+
 	output := make(map[string]interface{})
-	output["terms"] = searchedTerms
+	if len(searchedTerms) == 0 {
+		// otherwise the json package turns this into null
+		output["terms"] = []string{}
+	} else {
+		RemoveDuplicatesStrings(&searchedTerms)
+		output["terms"] = searchedTerms
+	}
 	output["results"] = rows
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	renderer.JSON(w, http.StatusOK, output)
@@ -602,6 +758,7 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 	errorHandler(err)
 	pipedCommands := 0
 	var encodedURL string
+	var encodedURLAndTerm string
 	for i, each := range all {
 		if i%2 == 0 {
 			encodedURL = each
@@ -614,10 +771,11 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 			}
 			prefixes := getPrefixes(each)
 			for _, prefix := range prefixes {
+				encodedURLAndTerm = fmt.Sprintf("%v**%v", encodedURL, prefix.term)
 				if encodedGroup != "" {
-					c.Append("ZREM", encoded+encodedGroup+prefix, encodedURL)
+					c.Append("ZREM", encoded+encodedGroup+prefix.start, encodedURLAndTerm)
 				} else {
-					c.Append("ZREM", encoded+prefix, encodedURL)
+					c.Append("ZREM", encoded+prefix.start, encodedURLAndTerm)
 				}
 				pipedCommands++
 			}

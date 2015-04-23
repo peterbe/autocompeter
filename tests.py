@@ -93,7 +93,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': [u'blo'],
+                'terms': [u'blog'],
                 'results': [
                     [
                         u'/plog/something',
@@ -126,6 +126,26 @@ class E2E(unittest.TestCase):
         terms = r.json()['terms']
         eq_(terms, ['monday', '2015'])
         results = r.json()['results']
+        print r.json()
+        eq_(len(results), 1)
+
+    def test_search_with_spellcorrection(self):
+        r = self.post('/v1', {
+            'url': '/plog/2015',
+            'title': "Monday Meeting 2015",
+        }, headers={'Auth-Key': 'xyz123'})
+        eq_(r.status_code, 201)
+
+        r = self.get('/v1?q=monda&d=peterbecom')
+        terms = r.json()['terms']
+        eq_(terms, ['monday'])
+        results = r.json()['results']
+        eq_(len(results), 1)
+
+        r = self.get('/v1?q=munda&d=peterbecom')
+        terms = r.json()['terms']
+        eq_(terms, ['monday'])
+        results = r.json()['results']
         eq_(len(results), 1)
 
     def test_search_too_short(self):
@@ -155,7 +175,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': [u'blo'],
+                'terms': [u'blog'],
                 'results': [
                     [
                         u'/plog/something',
@@ -169,7 +189,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': [u'blo'],
+                'terms': [u'blog'],
                 'results': [
                     [
                         u'/some/page',
@@ -363,7 +383,7 @@ class E2E(unittest.TestCase):
         eq_(r.status_code, 200)
         eq_(
             r.json()['terms'],
-            ['blog', 'ab']
+            ['blog', 'about']
         )
         eq_(
             r.json()['results'],
@@ -378,7 +398,7 @@ class E2E(unittest.TestCase):
         eq_(r.status_code, 200)
         eq_(
             r.json()['terms'],
-            [u'peter']
+            []
         )
         eq_(r.json()['results'], [])
 
