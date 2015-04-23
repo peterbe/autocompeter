@@ -8,6 +8,7 @@ import (
 	"github.com/fiam/gounidecode/unidecode"
 	"github.com/fzzy/radix/redis"
 	"github.com/mholt/binding"
+	"log"
 	"net/http"
 	"regexp"
 	"sort"
@@ -53,7 +54,7 @@ func getPrefixes(title string) []string {
 	var prefixes []string
 	words, _ := cleanWords(title)
 	for _, word := range words {
-		for i, _ := range word {
+		for i := range word {
 			if i > 0 {
 				prefixes = append(prefixes, word[0:i])
 			}
@@ -126,7 +127,7 @@ func updateHandler(w http.ResponseWriter, req *http.Request) {
 	// group := form.Group
 
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.Put(c)
 
 	domain, err := GetDomain(key, c)
@@ -156,7 +157,7 @@ func insertDocument(domain, title, url, group string, popularity float64, c *red
 	existingTitle, _ := c.Cmd("HGET", encoded+"$titles", encodedURL).Str()
 	if existingTitle == "" {
 		err := c.Cmd("HINCRBY", "$domaindocuments", domain, 1).Err
-		errHndlr(err)
+		errorHandler(err)
 	}
 
 	pipedCommands := 0
@@ -177,7 +178,7 @@ func insertDocument(domain, title, url, group string, popularity float64, c *red
 	pipedCommands++
 	for i := 1; i <= pipedCommands; i++ {
 		if err := c.GetReply().Err; err != nil {
-			errHndlr(err)
+			errorHandler(err)
 		}
 	}
 
@@ -202,7 +203,7 @@ func bulkHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.Put(c)
 
 	domain, err := GetDomain(key, c)
@@ -217,7 +218,7 @@ func bulkHandler(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	var bs bulkDocuments
 	err = decoder.Decode(&bs)
-	errHndlr(err)
+	errorHandler(err)
 	for _, b := range bs.Documents {
 		insertDocument(
 			domain,
@@ -285,7 +286,7 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	form.URL = strings.Trim(form.URL, " ")
 
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.CarefullyPut(c, &err)
 
 	domain, err := GetDomain(key, c)
@@ -306,10 +307,10 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	title, err = reply.Str()
 
-	errHndlr(err)
+	errorHandler(err)
 	if title != "" {
 		err = c.Cmd("HINCRBY", "$domaindocuments", domain, -1).Err
-		errHndlr(err)
+		errorHandler(err)
 	}
 
 	reply = c.Cmd("HGET", encoded+"$groups", encodedURL)
@@ -338,7 +339,7 @@ func deleteHandler(w http.ResponseWriter, req *http.Request) {
 
 	for i := 1; i <= pipedCommands; i++ {
 		if err := c.GetReply().Err; err != nil {
-			errHndlr(err)
+			errorHandler(err)
 		}
 	}
 	output := map[string]string{"message": "OK"}
@@ -403,7 +404,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 
 	// this is only temporary logging
 	ts := time.Now().Unix()
-	fmt.Println(fmt.Sprintf("%v$%v$%v", form.Domain, form.Query, ts))
+	log.Printf("%v$%v$%v", form.Domain, form.Query, ts)
 
 	// If the queryhas more than one term, e.g "one spo" then we have
 	// completed the first word and don't expect autocompletion on that.
@@ -421,13 +422,13 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.CarefullyPut(c, &err)
 
 	now := time.Now()
 	thisMonthFetchesKey := fmt.Sprintf("$domainfetches$%v$%v", now.Year(), int(now.Month()))
 	err = c.Cmd("HINCRBY", thisMonthFetchesKey, form.Domain, 1).Err
-	errHndlr(err)
+	errorHandler(err)
 
 	getReplies := func(terms []string, group string) ([]string, error) {
 		encodedTerms := make([]string, len(terms))
@@ -450,10 +451,10 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 		return replies, err
 	}
 
-	replies := make([]string, 0)
+	var replies []string
 	if len(terms) > 0 {
 		replies, err = getReplies(terms, "")
-		errHndlr(err)
+		errorHandler(err)
 	}
 	var replyStructs []Reply
 	for i, element := range replies {
@@ -463,7 +464,7 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	for _, group := range groups {
 		replies, err = getReplies(terms, group)
-		errHndlr(err)
+		errorHandler(err)
 		for i, element := range replies {
 			if i%2 == 0 {
 				replyStructs = append(replyStructs, Reply{element, replies[i+1]})
@@ -499,9 +500,9 @@ func fetchHandler(w http.ResponseWriter, req *http.Request) {
 	if len(encodedUrls) == 0 {
 	} else {
 		titles, err = c.Cmd("HMGET", encoded+"$titles", encodedUrls).List()
-		errHndlr(err)
+		errorHandler(err)
 		urls, err = c.Cmd("HMGET", encoded+"$urls", encodedUrls).List()
-		errHndlr(err)
+		errorHandler(err)
 	}
 	rows := make([]interface{}, len(titles))
 	for i, title := range titles {
@@ -528,7 +529,7 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.Put(c)
 
 	domain, err := GetDomain(key, c)
@@ -542,7 +543,7 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 	documentsStr, err := c.Cmd("HGET", "$domaindocuments", domain).Str()
 	if documentsStr != "" {
 		documents, err = strconv.Atoi(documentsStr)
-		errHndlr(err)
+		errorHandler(err)
 	}
 
 	now := time.Now()
@@ -561,7 +562,7 @@ func privateStatsHandler(w http.ResponseWriter, req *http.Request) {
 				fetchesStr, err = c.Cmd("HGET", fetchKey, domain).Str()
 				if err == nil {
 					fetches, err = strconv.Atoi(fetchesStr)
-					errHndlr(err)
+					errorHandler(err)
 					thisYearFetches[fmt.Sprintf("%v", m)] = fetches
 				}
 			}
@@ -585,7 +586,7 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.Put(c)
 
 	domain, err := GetDomain(key, c)
@@ -598,7 +599,7 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 	encoded := encodeString(domain)
 
 	all, err := c.Cmd("HGETALL", encoded+"$titles").List()
-	errHndlr(err)
+	errorHandler(err)
 	pipedCommands := 0
 	var encodedURL string
 	for i, each := range all {
@@ -609,7 +610,7 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 			reply := c.Cmd("HGET", encoded+"$groups", encodedURL)
 			if reply.Type != redis.NilReply {
 				encodedGroup, err = reply.Str()
-				errHndlr(err)
+				errorHandler(err)
 			}
 			prefixes := getPrefixes(each)
 			for _, prefix := range prefixes {
@@ -633,12 +634,12 @@ func flushHandler(w http.ResponseWriter, req *http.Request) {
 
 	for i := 1; i <= pipedCommands; i++ {
 		if err := c.GetReply().Err; err != nil {
-			errHndlr(err)
+			errorHandler(err)
 		}
 	}
 
 	err = c.Cmd("HSET", "$domaindocuments", domain, 0).Err
-	errHndlr(err)
+	errorHandler(err)
 
 	output := map[string]string{"message": "OK"}
 	renderer.JSON(w, http.StatusNoContent, output)

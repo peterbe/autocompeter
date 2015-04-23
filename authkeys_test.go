@@ -47,13 +47,13 @@ func (suite *Suite) TestGetDomainSomething() {
 	// authKeys.Init()
 
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.Put(c)
 	err = c.Cmd("HSET", "$domainkeys", "xyz1234567890", "peterbe.com").Err
-	errHndlr(err)
+	errorHandler(err)
 
 	domain, err := GetDomain("xyz1234567890", c)
-	errHndlr(err)
+	errorHandler(err)
 	assert.Equal(
 		suite.T(),
 		domain,
@@ -66,10 +66,10 @@ func (suite *Suite) TestGetDomainNothing() {
 	// authKeys.Init()
 
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 
 	domain, err := GetDomain("xyz1234567890", c)
-	errHndlr(err)
+	errorHandler(err)
 	assert.Equal(
 		suite.T(),
 		domain,

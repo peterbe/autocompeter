@@ -43,7 +43,7 @@ func (suite *HandlerSuite) SetupTest() {
 	}
 
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.Put(c)
 	SetDomain("xyz1234567890", "peterbe.com", c)
 

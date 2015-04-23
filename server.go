@@ -14,6 +14,7 @@ import (
 	// "github.com/deferpanic/deferclient/errors"
 	"golang.org/x/oauth2"
 	githuboauth "golang.org/x/oauth2/github"
+	"log"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -25,10 +26,9 @@ import (
 // 	return 1.0
 // }
 
-func errHndlr(err error) {
+func errorHandler(err error) {
 	if err != nil {
-		fmt.Println("error:", err)
-		panic(err)
+		log.Panic(err)
 	}
 }
 
@@ -51,21 +51,6 @@ func getUsername(req *http.Request) string {
 	cookie, err := req.Cookie("username")
 	if err == nil {
 		sCookie.Decode("username", cookie.Value, &username)
-		// if err = sCookie.Decode("username", cookie.Value, &username); err == nil {
-		// 	c, err := redisPool.Get()
-		// 	errHndlr(err)
-		// 	defer redisPool.CarefullyPut(c, &err)
-		// 	fmt.Println("You are signed in")
-		// 	reply := c.Cmd("HGET", "$emails", username)
-		// 	if reply.Type != redis.NilReply {
-		// 		var email string
-		// 		email, err = reply.Str()
-		// 		errHndlr(err)
-		// 		fmt.Println("email", email)
-		// 	} else {
-		// 		username = ""
-		// 	}
-		// }
 	}
 	return username
 }
@@ -83,12 +68,12 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 		// Yay! You're signed in!
 		context["Username"] = username
 		c, err := redisPool.Get()
-		errHndlr(err)
+		errorHandler(err)
 		defer redisPool.CarefullyPut(c, &err)
 
 		userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
 		replies, err := c.Cmd("SMEMBERS", userdomainsKey).List()
-		errHndlr(err)
+		errorHandler(err)
 
 		var domains []domainRow
 
@@ -97,7 +82,7 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 			reply := c.Cmd("HGET", "$domainkeys", key)
 			if reply.Type != redis.NilReply {
 				domain, err = reply.Str()
-				errHndlr(err)
+				errorHandler(err)
 				domains = append(domains, domainRow{
 					Key:    key,
 					Domain: domain,
@@ -134,7 +119,11 @@ func handleGitHubLogin(w http.ResponseWriter, req *http.Request) {
 func handleGitHubCallback(w http.ResponseWriter, req *http.Request) {
 	state := req.FormValue("state")
 	if state != oauthStateString {
-		fmt.Printf("invalid oauth state, expected '%s', got '%s'\n", oauthStateString, state)
+		log.Printf(
+			"invalid oauth state, expected '%s', got '%s'\n",
+			oauthStateString,
+			state,
+		)
 		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 		return
 	}
@@ -142,7 +131,7 @@ func handleGitHubCallback(w http.ResponseWriter, req *http.Request) {
 	code := req.FormValue("code")
 	token, err := oauthConf.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		fmt.Printf("oauthConf.Exchange() failed with '%s'\n", err)
+		log.Printf("oauthConf.Exchange() failed with '%s'\n", err)
 		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 		return
 	}
@@ -153,25 +142,25 @@ func handleGitHubCallback(w http.ResponseWriter, req *http.Request) {
 	user, _, err := client.Users.Get("")
 
 	if err != nil {
-		fmt.Printf("client.Users.Get() faled with '%s'\n", err)
+		log.Printf("client.Users.Get() faled with '%s'\n", err)
 		http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 		return
 	}
 
-	fmt.Printf("Logged in as GitHub user: %s (%s)\n", *user.Login, *user.Email)
+	log.Printf("Logged in as GitHub user: %s (%s)\n", *user.Login, *user.Email)
 	// fmt.Println(user)
 	// store the email
 	c, err := redisPool.Get()
-	errHndlr(err)
+	errorHandler(err)
 	defer redisPool.CarefullyPut(c, &err)
 
 	err = c.Cmd("SADD", "$usernames", *user.Login).Err
-	errHndlr(err)
+	errorHandler(err)
 	err = c.Cmd("HSET", "$emails", *user.Login, *user.Email).Err
-	errHndlr(err)
+	errorHandler(err)
 
 	encoded, err := sCookie.Encode("username", *user.Login)
-	errHndlr(err)
+	errorHandler(err)
 	expire := time.Now().AddDate(0, 0, 1) // how long is this?
 	secureCookie := isOnHTTPS(req)
 
@@ -207,15 +196,15 @@ func domainkeyNewHandler(w http.ResponseWriter, req *http.Request) {
 		username := getUsername(req)
 		if username != "" {
 			c, err := redisPool.Get()
-			errHndlr(err)
+			errorHandler(err)
 			defer redisPool.CarefullyPut(c, &err)
 
 			key := randString(24)
 			userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
 			err = c.Cmd("SADD", userdomainsKey, key).Err
-			errHndlr(err)
+			errorHandler(err)
 			err = c.Cmd("HSET", "$domainkeys", key, domain).Err
-			errHndlr(err)
+			errorHandler(err)
 		}
 	}
 
@@ -230,14 +219,14 @@ func domainkeyDeleteHandler(w http.ResponseWriter, req *http.Request) {
 		if username != "" {
 			// Yay! You're signed in!
 			c, err := redisPool.Get()
-			errHndlr(err)
+			errorHandler(err)
 			defer redisPool.CarefullyPut(c, &err)
 
 			userdomainsKey := fmt.Sprintf("$userdomains$%v", username)
 			err = c.Cmd("SREM", userdomainsKey, key).Err
-			errHndlr(err)
+			errorHandler(err)
 			err = c.Cmd("HDEL", "$domainkeys", key).Err
-			errHndlr(err)
+			errorHandler(err)
 		} // else, we should yield some sort of 403 message maybe
 	}
 	http.Redirect(w, req, "/#auth", http.StatusFound)
@@ -321,9 +310,9 @@ func main() {
 
 	sCookie = securecookie.New([]byte(hashKey), []byte(blockKey))
 
-	fmt.Println("REDIS DATABASE:", redisDatabase)
-	fmt.Println("DEBUG MODE:", debug)
-	fmt.Println("STATIC PREFIX:", staticPrefix)
+	log.Println("REDIS DATABASE:", redisDatabase)
+	log.Println("DEBUG MODE:", debug)
+	log.Println("STATIC PREFIX:", staticPrefix)
 
 	if !debug {
 		redisPoolSize = 100
@@ -338,7 +327,7 @@ func main() {
 	} else if procs > maxProcs {
 		panic(fmt.Sprintf("PROCS > max (%v)", maxProcs))
 	}
-	fmt.Println("PROCS:", procs)
+	log.Println("PROCS:", procs)
 	runtime.GOMAXPROCS(procs)
 
 	renderer = render.New(render.Options{
@@ -364,7 +353,7 @@ func main() {
 
 	var err error
 	redisPool, err = pool.NewCustomPool("tcp", redisURL, redisPoolSize, df)
-	errHndlr(err)
+	errorHandler(err)
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", dfs.HTTPHandler(indexHandler)).Methods("GET", "HEAD")
