@@ -211,7 +211,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': [u'blog'],
+                'terms': [u'blogged'],
                 'results': [
                     [
                         u'/some/page',
@@ -226,7 +226,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': [u'blög', u'blog'],
+                'terms': [u'blögged', u'blogged'],
                 'results': [
                     [
                         u'/some/page',
@@ -248,7 +248,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': ['watc'],
+                'terms': ['watch'],
                 'results': [
                     [
                         u'/some/page',
@@ -268,7 +268,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': ['o'],
+                'terms': ["o'clock"],
                 'results': [
                     [
                         u'/some/page2',
@@ -282,7 +282,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': ['o'],
+                'terms': ["o'clock"],
                 'results': [
                     [
                         u'/some/page2',
@@ -296,7 +296,7 @@ class E2E(unittest.TestCase):
         eq_(
             r.json(),
             {
-                'terms': ["o'c"],
+                'terms': ["o'clock"],
                 'results': [
                     [
                         u'/some/page2',
