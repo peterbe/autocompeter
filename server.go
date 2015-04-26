@@ -156,8 +156,12 @@ func handleGitHubCallback(w http.ResponseWriter, req *http.Request) {
 
 	err = c.Cmd("SADD", "$usernames", *user.Login).Err
 	errorHandler(err)
-	err = c.Cmd("HSET", "$emails", *user.Login, *user.Email).Err
-	errorHandler(err)
+	if user.Email != nil {
+		err = c.Cmd("HSET", "$emails", *user.Login, *user.Email).Err
+		errorHandler(err)
+	}
+	// c.Cmd("HSET", "$emails", *user.Login, *user.Email)
+	// fmt.Println(*user.Login, *user.Email)
 
 	encoded, err := sCookie.Encode("username", *user.Login)
 	errorHandler(err)
