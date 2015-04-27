@@ -147,7 +147,12 @@ func handleGitHubCallback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Printf("Logged in as GitHub user: %s (%s)\n", *user.Login, *user.Email)
+	if user.Email == nil {
+		log.Printf("Logged in as GitHub user: %s\n", *user.Login)
+	} else {
+		log.Printf("Logged in as GitHub user: %s (%s)\n", *user.Login, *user.Email)
+	}
+	//
 	// fmt.Println(user)
 	// store the email
 	c, err := redisPool.Get()
