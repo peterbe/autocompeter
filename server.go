@@ -308,11 +308,10 @@ func main() {
 	flag.Parse()
 
 	dfs := deferstats.NewClient(deferPanicKey)
+	if deferPanicKey == "" {
+		dfs.SetnoPost(true)
+	}
 	go dfs.CaptureStats()
-	// if deferPanicKey != "" {
-	// 	dfs := deferstats.NewClient(deferPanicKey)
-	// 	go dfs.CaptureStats()
-	// }
 
 	oauthConf.ClientID = clientID
 	oauthConf.ClientSecret = clientSecret
