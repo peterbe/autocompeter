@@ -375,8 +375,8 @@ func main() {
 	mux.HandleFunc("/login", dfs.HTTPHandler(handleGitHubLogin)).Methods("GET")
 	mux.HandleFunc("/logout", dfs.HTTPHandler(logoutHandler)).Methods("GET", "POST")
 	mux.HandleFunc("/github_oauth_cb", dfs.HTTPHandler(handleGitHubCallback)).Methods("GET")
-	mux.HandleFunc("/domainkeys/new", dfs.HTTPHandler(domainkeyNewHandler)).Methods("POST")
-	mux.HandleFunc("/domainkeys/delete", dfs.HTTPHandler(domainkeyDeleteHandler)).Methods("POST")
+	mux.HandleFunc("/domainkeys/new", domainkeyNewHandler).Methods("POST")
+	mux.HandleFunc("/domainkeys/delete", domainkeyDeleteHandler).Methods("POST")
 
 	n := negroni.Classic()
 
