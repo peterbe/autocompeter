@@ -4,7 +4,7 @@ autocompeter.com home page.
 
 How I load in all blog posts for local development:
 
-    ./populate.py --flush -d 8 --destination="http://localhost:3000" --domain="localhost:3000" --bulk
+    ./populate.py --flush -d 8 --destination="http://localhost:3000" --domain="localhost:3000"
 
 
 Then to check it run:
