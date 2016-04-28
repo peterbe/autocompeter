@@ -8,7 +8,7 @@
     },
     "participate": {
         "home": "https://autocompeter.com",
-        "docs": "http://autocompeter.readthedocs.org/"
+        "docs": "https://autocompeter.readthedocs.io/"
     },
     "bugs": {
         "list": "https://github.com/peterbe/autocompeter/issues",
