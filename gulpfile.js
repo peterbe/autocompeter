@@ -7,7 +7,7 @@ var sass = require('gulp-sass');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var rename = require('gulp-rename');
-var minifyCSS = require('gulp-minify-css');
+var cleanCSS = require('gulp-clean-css');
 var header = require('gulp-header');
 
 var bowerPkg = require('./bower.json');
@@ -27,7 +27,7 @@ gulp.task('sass', function() {
         .pipe(sass())
         .pipe(gulp.dest('public/dist'))
         .pipe(rename('autocompeter.min.css'))
-        .pipe(minifyCSS({keepBreaks:true}))
+        .pipe(cleanCSS({keepBreaks:true}))
         .pipe(header(banner, {pkg: bowerPkg}))
         .pipe(gulp.dest('public/dist'));
 });
