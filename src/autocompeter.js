@@ -177,6 +177,7 @@
         }
       } else {
         r.style.display = 'none';
+        return;
       }
       results_ps = [];
       var p, a;
@@ -355,6 +356,23 @@
         } else {
           return;
         }
+
+        if (q.value.trim().length) {
+          // Suppose you have typed in "Pytho", then your
+          // previously typed in search is likely to be "Pyth".
+          // I.e. the same minus the last character.
+          // If that search is in the cache and had 0 results, then
+          // there's no point also searching for "Pytho"
+          var previous_value = q.value.trim().substring(
+            0, q.value.trim().length - 1
+          );
+          if (cache[previous_value] && !cache[previous_value].results.length) {
+            // don't bother sending this search then
+            cache[q.value.trim()] = {results: []};
+            return;
+          }
+        }
+
         req.onreadystatechange = function() {
           if (req.readyState === 4) {
             if (req.status === 200) {
