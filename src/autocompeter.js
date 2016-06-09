@@ -90,6 +90,7 @@
 
     var results_ps = [];
     var selected_pointer = 0;
+    var actually_selected_pointer = false;
     q.spellcheck = false;
     q.autocomplete = 'off';
 
@@ -177,6 +178,7 @@
         }
       } else {
         r.style.display = 'none';
+        return;
       }
       results_ps = [];
       var p, a;
@@ -214,7 +216,7 @@
         }
 
         p = createDomElement('p');
-        if (i === selected_pointer) {
+        if (i === selected_pointer && actually_selected_pointer) {
           p.classList.add('selected');
         }
         p.dataset.i = i;  // needed by the onmouseover event handler
@@ -243,11 +245,12 @@
 
     function findParentForm(element) {
       var parent = element.parentNode;
+      if (parent === null) {
+        console.warn("Form can not be found. Nothing to submit");
+        return;
+      }
       if (parent.nodeName === 'FORM') {
         return parent;
-      }
-      if (parent === null) {
-        throw "too deep. no parent form node to be found";
       }
       return findParentForm(parent);
     }
@@ -261,6 +264,7 @@
         if (q.value !== hint.value) {
           handler();  // this starts a new ajax request
         }
+        actually_selected_pointer = true;
       } else if (name === 'down' || name === 'up') {
         if (name === 'down') {
           selected_pointer = Math.min(results_ps.length - 1, ++selected_pointer);
@@ -268,15 +272,16 @@
           selected_pointer = Math.max(0, --selected_pointer);
         }
         for (i=0, len=results_ps.length; i < len; i++) {
-          if (i === selected_pointer) {
+          if (i === selected_pointer && actually_selected_pointer) {
             results_ps[i].classList.add('selected');
           } else {
             results_ps[i].classList.remove('selected');
           }
         }
+        actually_selected_pointer = true;
         displayResults();
       } else if (name === 'enter') {
-        if (results_ps.length) {
+        if (results_ps.length && actually_selected_pointer) {
           var p = results_ps[selected_pointer];
           var a = p.getElementsByTagName('a')[0];
           q.value = hint.value = a.textContent;
@@ -285,7 +290,10 @@
         } else {
           // We need to submit the form but we can't simply `return true`
           // because the event we're returning to isn't a form submission.
-          findParentForm(q).submit();
+          var form = findParentForm(q);
+          if (form) {
+            form.submit();
+          }
           return true;
         }
       } else if (name === 'esc') {
@@ -337,8 +345,11 @@
 
         }
       }
-      // new character, let's reset the selected_pointer
+      // New character, let's reset the selected_pointer
       selected_pointer = 0;
+      // Also, reset that none of the results have been explicitly
+      // selected yet.
+      actually_selected_pointer = false;
       if (cache[q.value.trim()]) {
         var response = cache[q.value.trim()];
         terms = response.terms;
@@ -355,6 +366,23 @@
         } else {
           return;
         }
+
+        if (q.value.trim().length) {
+          // Suppose you have typed in "Pytho", then your
+          // previously typed in search is likely to be "Pyth".
+          // I.e. the same minus the last character.
+          // If that search is in the cache and had 0 results, then
+          // there's no point also searching for "Pytho"
+          var previous_value = q.value.trim().substring(
+            0, q.value.trim().length - 1
+          );
+          if (cache[previous_value] && !cache[previous_value].results.length) {
+            // don't bother sending this search then
+            cache[q.value.trim()] = {results: []};
+            return;
+          }
+        }
+
         req.onreadystatechange = function() {
           if (req.readyState === 4) {
             if (req.status === 200) {
