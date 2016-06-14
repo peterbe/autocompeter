@@ -6,7 +6,7 @@ A Go autocomplete Redis server.
 Documentation
 -------------
 
-[Documentation on Read the Docs](http://autocompeter.readthedocs.org)
+[Documentation on Read the Docs](https://autocompeter.readthedocs.io)
 
 Running tests
 -------------

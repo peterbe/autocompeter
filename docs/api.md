@@ -45,7 +45,7 @@ Here's an example using `curl`:
     -d popularity="105" \
     https://autocompeter.com/v1
 
-Here's the same example using Python [requests](http://requests.readthedocs.org/):
+Here's the same example using Python [requests](https://requests.readthedocs.io/):
 
     response = requests.post(
         'https://autocompeter.com/v1',
@@ -179,7 +179,7 @@ Here's an example using curl:
     https://autocompeter.com/v1/bulk
 
 And here's an example using
-Python [requests](http://requests.readthedocs.org/en/latest/):
+Python [requests](https://requests.readthedocs.io/en/latest/):
 
 
 ```python
