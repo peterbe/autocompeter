@@ -11,7 +11,7 @@
     "url": "https://github.com/peterbe/autocompeter.git"
   },
   "author": "Peter Bengtsson",
-  "license": "BSD",
+  "license": "MPL-2.0",
   "bugs": {
     "url": "https://github.com/peterbe/autocompeter/issues"
   },
