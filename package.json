@@ -19,7 +19,7 @@
   "devDependencies": {
     "gulp": "3.9.1",
     "gulp-clean-css": "2.0.10",
-    "gulp-concat": "2.6.0",
+    "gulp-concat": "2.6.1",
     "gulp-header": "1.8.7",
     "gulp-jshint": "2.0.1",
     "gulp-less": "3.1.0",
