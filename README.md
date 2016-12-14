@@ -2,6 +2,7 @@ A Go autocomplete Redis server.
 ===============================
 
 [![Build Status](https://travis-ci.org/peterbe/autocompeter.svg?branch=master)](https://travis-ci.org/peterbe/autocompeter)
+[![CDNJS](https://img.shields.io/cdnjs/v/autocompeter.svg)](https://cdnjs.com/libraries/autocompeter)
 
 Documentation
 -------------
