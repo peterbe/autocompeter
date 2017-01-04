@@ -18,9 +18,8 @@
         "prod": "https://autocompeter.com"
     },
     "keywords": [
-        "go",
-        "redis",
-        "javascript",
-        "scss"
+        "django",
+        "elasticsearch",
+        "javascript"
     ]
 }
