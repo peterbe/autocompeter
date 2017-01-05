@@ -36,7 +36,7 @@ six==1.10.0 \
 urllib3==1.19.1 \
     --hash=sha256:6410d56c88d9e8ae4fbc0f35122328ad5bd456ec6f0763ae5648c83ff8bd747b \
     --hash=sha256:53bc34c8ee268c3bd83ecf5e9c80fa783f3148484579bd4e20f4a7c1bb2dd6a0
-dj-database-url==0.4.1 \
+dj-database-url==0.4.2 \
     --hash=sha256:7f4c78d2a090df8dfaf56d5d3ff7bbee17360436e4879558317e2314424864cd
 requests==2.12.4 \
     --hash=sha256:000748df49e087784441b2621c50fb81046c5c8e80e0d91674ffad65b9e13844 \
