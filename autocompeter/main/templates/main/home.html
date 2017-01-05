@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Autocompeter - A really fast AJAX autocomplete service and widget">
+    <meta name="author" content="Peter Bengtsson">
+
+    <title>Autocompeter - A really fast AJAX autocomplete service and widget</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="{% static "main/css/bootstrap.min.css" %}" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="{% static "main/css/landing-page.css" %}" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <!-- <link href="/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    {#<link href="//fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">#}
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <link href="{% static "autocompeter.min.css" %}" rel="stylesheet">
+    <link rel="icon" type="image/icon" href="/favicon.ico">
+
+    <!-- now let's undo some CSS we are forced upon by bootstrap and landing-page.css -->
+    <style>
+    ._ac-wrap { width: 400px; }
+    @media only screen and (max-width : 321px) {
+      ._ac-wrap { width: 290px; }
+    }
+    ._ac-results a { font-weight: normal; }
+    ._ac-results a b { font-weight: bold; }
+
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-fixed-top topnav" role="navigation">
+        <div class="container topnav">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand topnav" href="#">Autocompeter</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="#demo">Demo</a>
+                    </li>
+                    <li>
+                        <a href="#usage">Usage</a>
+                    </li>
+                    <li>
+                        <a href="#about">About/Features</a>
+                    </li>
+                    <li>
+                        <a href="#docs">Documentation</a>
+                    </li>
+
+                    <li>
+
+                        {% if request.user.is_authenticated %}
+                        <a href="#login" title="{{ request.user.email }}">Authenticated</a>
+                        {% else %}
+                        <a href="#login">Login/Signup</a>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+    {% if messages %}
+    <a name="messages"></a>
+    <div class="container messages" style="padding: 80px 0">
+        <div class="row">
+          {% for message in messages %}
+          <div class="alert
+          {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}
+          alert-dismissible" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            {{ message }}
+          </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+
+    <!-- Header -->
+    <a name="demo"></a>
+    <div class="intro-header">
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="intro-message">
+                        <h1>Autocompeter</h1>
+                        <h3>A really fast AJAX autocomplete service and widget</h3>
+                        <hr class="intro-divider">
+<form action="https://www.peterbe.com/search">
+<input type="text" name="q" class="form-control" placeholder="Type something">
+</form>
+
+<script src="{% static "autocompeter.min.js" %}"></script>
+<script>
+// The url option overide here is optional, just done to make local development
+// easier.
+Autocompeter(
+  document.querySelector('input[name="q"]'), {
+    url: location.protocol + '//' + location.host + '/v1'
+  }
+);
+</script>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.intro-header -->
+
+    <!-- Page Content -->
+
+    <a name="usage"></a>
+    <div class="content-section-a">
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Usage</h2>
+                    <p class="lead">
+                      Download
+                      <a href="https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter.min.css">
+                        autocompeter.min.css
+                      </a> and
+                      <a href="https://raw.githubusercontent.com/peterbe/autocompeter/master/public/dist/autocompeter.min.js">
+                        autocompeter.min.js
+                      </a> and insert into your site.
+                    </p>
+                    <p class="lead">
+                      Submit your page information to <b><script>document.write(location.host)</script></b>
+                      like this:
+                    </p>
+                      <pre>curl -X POST -H "Auth-Key: yoursecurekey" \
+ -d url=/some/url \
+ -d title="Some Title" https://autocompeter.com/v1</pre>
+                    <p class="lead">
+                      Or by bulk as one big JSON blob:
+                    </p>
+                    <pre>curl -X POST -H "Auth-Key: yoursecurekey" \
+-d '{"documents": [{"url":"/some/url", "title":"Some Title", "popularity":100}]}' \
+https://autocompeter.com/v1/bulk</pre>
+                    <p>
+                      Check out <a href="https://autocompeter.readthedocs.io/en/latest/api/">
+                      the documentation on how to use the API</a>.
+                    </p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                  <pre></pre>
+                  <pre></pre>
+                  <pre></pre>
+                  <pre>
+&lt;script&gt;
+Autocompeter(
+  document.querySelector('input[name="q"]')
+);
+&lt;/script&gt;</pre>
+                  <p class="lead">
+                    How the demo on this page was set up.
+                  </p>
+                  <ul>
+                    <li>See the HTML bits here on the right.</li>
+                    <li>The database was populate by sucking up all ~1,000+
+                      blog post titles from <a href="https://www.peterbe.com"
+                      >www.peterbe.com</a>.
+                    <li>A little bit of CSS overrides was added because
+                      this page's Boostrap CSS affected the CSS inside
+                       the autocomplete.
+                  </ul>
+
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+
+    <a name="about"></a>
+    <div class="content-section-b">
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">About</h2>
+                    <p class="lead">
+                    <b>Autocompeter</b> is a web service where you put a piece
+                    of CSS and Javascript on your site and send your titles and their URLs
+                    to <b>Autocompeter</b> so you can have an auto complete search
+                    widget on your own site.
+                    </p>
+                    <p class="lead">
+                      Original <a href="https://www.peterbe.com/plog/autocompeter.com">blog post about the launch here</a>.
+                    </p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                    <h2 class="section-heading">Features</h2>
+                    <ul>
+                      <li>Super fast</li>
+                      <li>Free</li>
+                      <li>No server tech for you to deploy or manage</li>
+                      <li>You determine the sort order by setting a "popularity" number on each title</li>
+                      <li>Can find "Pär is naïve" by typing in "par naive"</li>
+                      <li>You can submit use
+                        <a href="https://autocompeter.readthedocs.io/en/latest/api/#about-the-groups-and-access-control-and-privacy">"groups"</a>
+                        to differentiate content only certain users should see</li>
+                      <li><a href="https://autocompeter.readthedocs.io/en/latest/api/#bulk-upload">Bulk upload</a></li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+
+    <a name="code"></a>
+    <div class="content-section-a">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-lg-offset-1 col-sm-push-6  col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">About the JavaScript and CSS</h2>
+                    <ul>
+                      <li>Javascript code <i>weighs only 4.2 Kb</i> (2 Kb gzipped)</li>
+                      <li>Requires no jQuery or any other Javascript framework</li>
+                      <li>CSS code <b>weighs only 781 b</b> (395 b gzipped)</li>
+                      <li>The CSS code is derived from a
+                        <a href="https://github.com/peterbe/autocompeter/blob/master/src/autocompeter.scss"
+                        >SCSS file</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-5 col-sm-pull-6  col-sm-6">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">About the server</h2>
+                    <ul>
+                      <li>TODO: Re-write</li>
+                      <li>Written in <a href="http://golang.org/">Go</a></li>
+                      <li>Database is <a href="http://redis.io/">Redis</a></li>
+                      <li><a href="https://github.com/peterbe/autocompeter">All code is Open Source under a BSD License</a></li>
+
+                    </ul>
+
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+
+
+    <a name="docs"></a>
+    <div class="content-section-b">
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Documentation</h2>
+                    <p class="lead">
+                    Detailed documentation available on
+                    <a href="https://autocompeter.readthedocs.io/en/latest/">
+                      https://autocompeter.readthedocs.io
+                    </a>
+                    </p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                    <h2 class="section-heading">Bugs?</h2>
+                    <p class="lead">
+                      Just <a href="https://github.com/peterbe/autocompeter/issues/new">file an issue</a>
+                      on GitHub.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+
+    <a name="auth"></a>
+    <a name="login"></a>
+    <div class="content-section-a">
+
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <!-- <hr class="section-heading-spacer"> -->
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Login/Signup</h2>
+                    <p class="lead">
+                      {% if request.user.is_authenticated %}
+                      You are logged in as <code>{{ request.user.email }}</code><br>
+                      <form action="{% url 'auth:signout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn">Sign out</button>
+                      </form>
+                      {% else %}
+                      <a href="#login" class="login">
+                        Use your GitHub account to authenticate so you can
+                        manage your Auth-Key.
+                      </a>
+                      {% endif %}
+                    </p>
+                </div>
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                  {% if request.user.is_authenticated %}
+                  <h2 class="section-heading">Your Auth-Keys</h2>
+
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Domain</th>
+                        <th>Key</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for key in keys %}
+                      <tr>
+                        <td><code>{{ key.domain.name }}</code></td>
+                        <td><code>{{ key.key }}</code></td>
+                        <td>
+                          <form action="" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="delete" value="{{ key.key }}">
+                            <button class="delete-key btn btn-default btn-xs">Delete</button>
+                          </form>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+
+                  <form action="" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                      <input type="text" name="domain" class="form-control" id="id_domain" placeholder="e.g. autocompeter.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Generate new key</button>
+                  </form>
+
+                  {% if domains %}
+                  <h2 class="section-heading" style="margin-top: 60px">
+                    Your Domain Stats
+                  </h2>
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Domain</th>
+                        <th>Searches</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for domain in domains %}
+                      <tr>
+                        <td>
+                          <code>{{ domain.name }}</code>
+                          <br />
+                          {{ domain.no_documents }} indexed documents
+                        </td>
+                        <td>
+                          <table class="table table-condensed fetches">
+                            <thead>
+                              <tr>
+                                <th>Year</th>
+                                <th>Month</th>
+                                <th>Searches</th>
+                              </tr>
+                            </thead>
+                            <tfoot>
+                              <tr>
+                                <td colspan="2">
+                                  Total
+                                </td>
+                                <td class="number">
+                                  {{ domain.fetch_total }}
+                                </td>
+                              </tr>
+                            </tfoot>
+                            <tbody>
+                              {% for f in domain.fetch_months %}
+                              <tr>
+                                <td>
+                                  {{ f.year }}
+                                </td>
+                                <td>
+                                  {{ f.month }}
+                                </td>
+                                <td class="number">
+                                  {{ f.fetches }}
+                                </td>
+                              </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+                  {% endif %}
+
+                  {% else %}
+                  <h2 class="section-heading">Examples of Use</h2>
+                  <p class="lead">
+                    Here are some different example implementations:
+                  </p>
+                  <ul>
+                    <li>
+                      <a href="http://cssmojo.com/search.html">
+                        cssmojo.com (real)
+                      </a>
+                    </li>
+                    <li>
+                      <a href="https://air.mozilla.org">
+                        Air Mozilla (real)
+                      </a>
+                    </li>
+                    <li>
+                      <a href="https://www.peterbe.com">
+                        Peterbe.com (real)
+                      </a>
+                    </li>
+                    <!-- <li>
+                      <a href="/examples/ratchet/index.html">
+                        Ratchet (mobile, mock)
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/examples/skeleton/index.html">
+                        Skeleton (mock)
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/examples/purecss/index.html">
+                        PureCSS (mock)
+                      </a>
+                    </li> -->
+                  </ul>
+                  {% endif %}
+                </div>
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <ul class="list-inline">
+                        <li>
+                            <a href="#">Home</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#demo">Demo</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#about">About/Features</a>
+                        </li>
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#docs">Documentation</a>
+                        </li>
+                        {% if request.user.is_authenticated %}
+                        <li class="footer-menu-divider">&sdot;</li>
+                        <li>
+                            <a href="#auth">Authenticated</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    <p class="copyright text-muted small">
+                      Copyright &copy; <a href="https://www.peterbe.com">Peter Bengtsson</a>
+                      2015-{% now "Y" %}.
+                      All Rights Reserved.
+                      Design by <a href="http://startbootstrap.com/template-overviews/landing-page/"
+                      >Start Bootstrap</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="{% static "main/js/jquery.js" %}"></script>
+
+    <!-- specific to just this page -->
+    <script>
+    $('pre').eq(2).text($('link').eq(2)[0].outerHTML);
+    $('pre').eq(3).text('<input type="text" name="q" placeholder="Type something">');
+    $('pre').eq(4).text($('script').eq(0)[0].outerHTML);
+    </script>
+    {% if not DEBUG %}
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-59823994-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    {% endif %}
+
+    <script src="https://cdn.auth0.com/js/lock/10.6/lock.min.js"></script>
+    <script>
+      var lock = new Auth0Lock('{{ AUTH0_CLIENT_ID }}', '{{ AUTH0_DOMAIN }}', {
+        auth: {
+          redirectUrl: document.location.protocol + '//' + document.location.host + '/auth/callback',
+          responseType: 'code',
+          params: {
+            scope: 'openid email' // Learn about scopes: https://auth0.com/docs/scopes
+          }
+        }
+      });
+      $('a.login').on('click', function(event) {
+        event.preventDefault();
+        lock.show();
+      });
+      $('.messages').on('click', 'button.close', function(event) {
+         if ($('.messages div.alert').length <= 1) {
+             $('.messages').remove();
+         }
+      });
+    </script>
+</body>
+
+</html>

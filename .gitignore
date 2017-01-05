@@ -1,8 +1,2 @@
 /TODO
-/site/
 node_modules/
-cover.out
-gin-bin
-/server
-/autocompeter
-/run-dev-server.sh
