@@ -78,7 +78,7 @@
                     <li>
 
                         {% if request.user.is_authenticated %}
-                        <a href="#login" title="{{ request.user.email }}">Authenticated</a>
+                        <a href="#login" title="{{ request.user.username }} ({{ request.user.email }})">Authenticated</a>
                         {% else %}
                         <a href="#login">Login/Signup</a>
                         {% endif %}
@@ -336,7 +336,7 @@ Autocompeter(
                     <h2 class="section-heading">Login/Signup</h2>
                     <p class="lead">
                       {% if request.user.is_authenticated %}
-                      You are logged in as <code>{{ request.user.email }}</code><br>
+                      You are logged in as <code>{{ request.user.username }}</code><br>
                       <form action="{% url 'auth:signout' %}" method="post">
                         {% csrf_token %}
                         <button type="submit" class="btn">Sign out</button>

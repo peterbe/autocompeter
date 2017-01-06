@@ -147,17 +147,34 @@ def default_username(email):
 
 
 def get_user(user_info):
-    email = user_info['email']
+    if 'api.github.com' in user_info.get('url', ''):
+        # It's a GitHub user
+        username = user_info['nickname']
 
-    try:
-        return User.objects.get(email__iexact=email)
-    except User.DoesNotExist:
-        return User.objects.create(
-            email=email,
-            username=default_username(email),
-            first_name=user_info.get('given_name') or '',
-            last_name=user_info.get('family_name') or '',
-        )
+        try:
+            return User.objects.get(username=username)
+        except User.DoesNotExist:
+            first_name = last_name = ''
+            if user_info.get('name'):
+                first_name, last_name = user_info['name'].rsplit(None, 1)
+            return User.objects.create(
+                email=user_info['email'],
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+            )
+    else:
+        email = user_info['email']
+
+        try:
+            return User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return User.objects.create(
+                email=email,
+                username=default_username(email),
+                first_name=user_info.get('given_name') or '',
+                last_name=user_info.get('family_name') or '',
+            )
 
 
 @require_POST
