@@ -174,10 +174,12 @@ def home(request, domain):
             term=q,
             results=len(results),
         )
-        return http.JsonResponse({
+        response = http.JsonResponse({
             'results': results,
             'terms': terms,
         })
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
 
 
 @auth_key('POST')
@@ -233,7 +235,9 @@ def bulk(request, domain):
 
 
 def ping(request):
-    return http.HttpResponse('pong')
+    response = http.HttpResponse('pong')
+    response['Access-Control-Allow-Origin'] = '*'
+    return response
 
 
 @auth_key('GET')
