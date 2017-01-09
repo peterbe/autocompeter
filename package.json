@@ -1,6 +1,6 @@
 {
   "name": "autocompeter",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "A really fast AJAX autocomplete service and widget",
   "main": "index.js",
   "scripts": {

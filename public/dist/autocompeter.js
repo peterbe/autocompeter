@@ -1,6 +1,6 @@
 /*!
 *
-* Copyright (c) 2015, Peter Bengtsson
+* Copyright (c) 2015-2017, Peter Bengtsson
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -89,7 +89,7 @@
     options.url += 'd=' + options.domain + '&q=';
 
     var results_ps = [];
-    var selected_pointer = 0;
+    var selected_pointer = -1;
     var actually_selected_pointer = false;
     q.spellcheck = false;
     q.autocomplete = 'off';
@@ -208,8 +208,7 @@
 
           hint_candidate = found[found.length - 1];
           if (hint_candidate !== undefined && !matched.test(q.value))  {
-
-            if (selected_pointer === i) {
+            if (selected_pointer === i || (selected_pointer === -1 && i === 0)) {
               hint_candidates.push(hint_candidate);
             }
           }
@@ -231,7 +230,7 @@
       }
       r.appendChild(p_fragments);
       if (hint_candidates.length && q.value.charAt(q.value.length - 1) !== ' ') {
-        hint_candidate = hint_candidates[selected_pointer % hint_candidates.length];
+        hint_candidate = hint_candidates[Math.max(0, selected_pointer) % hint_candidates.length];
         hint.value = q.value + hint_candidate;
       } else {
         // If there are no candidates there's no point putting the
@@ -282,7 +281,7 @@
         displayResults();
       } else if (name === 'enter') {
         if (results_ps.length && actually_selected_pointer) {
-          var p = results_ps[selected_pointer];
+          var p = results_ps[Math.max(0, selected_pointer)];
           var a = p.getElementsByTagName('a')[0];
           q.value = hint.value = a.textContent;
           r.style.display = 'none';
@@ -346,7 +345,7 @@
         }
       }
       // New character, let's reset the selected_pointer
-      selected_pointer = 0;
+      selected_pointer = -1;
       // Also, reset that none of the results have been explicitly
       // selected yet.
       actually_selected_pointer = false;
