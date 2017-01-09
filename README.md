@@ -1,5 +1,5 @@
-A ElasticSearch autocomplete Django server
-==========================================
+An ElasticSearch autocomplete Django server
+===========================================
 
 [![Build Status](https://travis-ci.org/peterbe/autocompeter.svg?branch=master)](https://travis-ci.org/peterbe/autocompeter)
 
@@ -11,13 +11,9 @@ Documentation
 Running tests
 -------------
 
-Both the unit test and integration test will connect to **Redis on
-database 8**. It will do a flush on this database.
-
 To run the unit tests run:
 
     ./manage.py test
-
 
 Using Docker
 ------------
@@ -40,6 +36,9 @@ Simply run:
 And now you should have a server running on `http://localhost:8000`
 
 
+And to run the tests with Docker:
+
+    docker-compose run web /usr/local/bin/python manage.py test
 
 Writing documentation
 ---------------------
