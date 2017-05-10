@@ -39,6 +39,6 @@ urllib3==1.19.1 \
 dj-database-url==0.4.2 \
     --hash=sha256:a6832d8445ee9d788c5baa48aef8130bf61fdc442f7d9a548424d25cd85c9f08 \
     --hash=sha256:e16d94c382ea0564c48038fa7fe8d9c890ef1ab1a8ec4cb48e732c124b9482fd
-requests==2.14.1 \
+requests==2.14.2 \
     --hash=sha256:000748df49e087784441b2621c50fb81046c5c8e80e0d91674ffad65b9e13844 \
     --hash=sha256:ed98431a0631e309bb4b63c81d561c1654822cb103de1ac7b47e45c26be7ae34
