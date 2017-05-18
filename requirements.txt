@@ -1,7 +1,7 @@
 Django==1.10.5 \
     --hash=sha256:4541a60834f28f308ee7b6e96400feca905fb0de473eb9dad6847e98a36d86d4 \
     --hash=sha256:0db89374b691b9c8b057632a6cd64b18d08db2f4d63b4d4af6024267ab965f8b
-elasticsearch-dsl==5.2.0 \
+elasticsearch-dsl==5.3.0 \
     --hash=sha256:5d3800d75240e99bbb0b5b16041e88a65cc8f7ddb34b6041d515a2d76df4352b \
     --hash=sha256:396393f7102a49605a91261d16218b5dd66b991a4a57cea982649cb52e6f25ac
 elasticsearch==5.0.1 \
