@@ -1,4 +1,4 @@
-Django==1.11.2 \
+Django==1.11.3 \
     --hash=sha256:a8e1a552205cda15023c39ecf17f7e525e96c5b0142e7879e8bd0c445351f2cc \
     --hash=sha256:fff7f062e510d812badde7cfc57745b7779edb4d209b2bc5ea8d954c22305c2b
 elasticsearch-dsl==5.0.0 \
