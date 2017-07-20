@@ -33,7 +33,7 @@ python-dateutil==2.6.0 \
 six==1.10.0 \
     --hash=sha256:0ff78c403d9bccf5a425a6d31a12aa6b47f1c21ca4dc2573a7e2f32a97335eb1 \
     --hash=sha256:105f8d68616f8248e24bf0e9372ef04d3cc10104f1980f54d57b2ce73a5ad56a
-urllib3==1.19.1 \
+urllib3==1.22 \
     --hash=sha256:6410d56c88d9e8ae4fbc0f35122328ad5bd456ec6f0763ae5648c83ff8bd747b \
     --hash=sha256:53bc34c8ee268c3bd83ecf5e9c80fa783f3148484579bd4e20f4a7c1bb2dd6a0
 dj-database-url==0.4.2 \
