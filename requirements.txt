@@ -12,7 +12,7 @@ python-decouple==3.0 \
 Unipath==1.1 \
     --hash=sha256:e6257e508d8abbfb6ddd8ec357e33589f1f48b1599127f23b017124d90b0fff7 \
     --hash=sha256:09839adcc72e8a24d4f76d63656f30b5a1f721fc40c9bcd79d8c67bdd8b47dae
-psycopg2==2.7.1 \
+psycopg2==2.7.2 \
     --hash=sha256:60f29f91a88fe7c2d1eb7fb64f3ea99b0bd3d06ea7169e187ccb2cb653f91311 \
     --hash=sha256:48c1648d090ca72cf430920fb62f138cd02f9d2b035d2d2654af0a38f28bdc27 \
     --hash=sha256:6b6f745fb3a94a8d48b2e225e14808768ed33c52993ad6319b8f9cb972fec4dd \
