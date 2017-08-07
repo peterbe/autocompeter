@@ -7,7 +7,7 @@ elasticsearch-dsl==5.1.0 \
 elasticsearch==5.0.1 \
     --hash=sha256:0454bb57323c10535570042c5cb2246fbdacd286ef4a537cf82e873982a36293 \
     --hash=sha256:bebb51b1bc312f2a305b49a2c0900bbfcbdfd9f23e93ff1fc05f4132f2a3d1ed
-python-decouple==3.0 \
+python-decouple==3.1 \
     --hash=sha256:99834c9ff7ce5c5b2f4a18bc0880753e54ea3aaabc3cfb16961a92d5046665df
 Unipath==1.1 \
     --hash=sha256:e6257e508d8abbfb6ddd8ec357e33589f1f48b1599127f23b017124d90b0fff7 \
