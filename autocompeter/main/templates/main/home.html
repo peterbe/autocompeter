@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Autocompeter - A really fast AJAX autocomplete service and widget">
+    <meta name="description" content="Autocompeter - A really fast XHR autocomplete service and widget">
     <meta name="author" content="Peter Bengtsson">
 
     <title>Autocompeter - A really fast AJAX autocomplete service and widget</title>
@@ -76,7 +76,6 @@
                     </li>
 
                     <li>
-
                         {% if request.user.is_authenticated %}
                         <a href="#login" title="{{ request.user.username }} ({{ request.user.email }})">Authenticated</a>
                         {% else %}
@@ -126,11 +125,9 @@
 <script>
 // The url option overide here is optional, just done to make local development
 // easier.
-Autocompeter(
-  document.querySelector('input[name="q"]'), {
-    url: location.protocol + '//' + location.host + '/v1'
-  }
-);
+Autocompeter(document.querySelector('input[name="q"]'), {
+  url: location.protocol + '//' + location.host + '/v1'
+});
 </script>
 
                     </div>
@@ -538,42 +535,61 @@ Autocompeter(
 
     <!-- specific to just this page -->
     <script>
-    $('pre').eq(2).text($('link').eq(2)[0].outerHTML);
-    $('pre').eq(3).text('<input type="text" name="q" placeholder="Type something">');
-    $('pre').eq(4).text($('script').eq(0)[0].outerHTML);
-    </script>
+    $('pre')
+  .eq(2)
+  .text($('link').eq(2)[0].outerHTML);
+$('pre')
+  .eq(3)
+  .text('<input type="text" name="q" placeholder="Type something">');
+$('pre')
+  .eq(4)
+  .text($('script').eq(0)[0].outerHTML);
+</script>
     {% if not DEBUG %}
     <script>
-      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-      ga('create', 'UA-59823994-1', 'auto');
-      ga('send', 'pageview');
-    </script>
+    (function(i, s, o, g, r, a, m) {
+  i['GoogleAnalyticsObject'] = r;
+  (i[r] =
+    i[r] ||
+    function() {
+      (i[r].q = i[r].q || []).push(arguments);
+    }),
+    (i[r].l = 1 * new Date());
+  (a = s.createElement(o)), (m = s.getElementsByTagName(o)[0]);
+  a.async = 1;
+  a.src = g;
+  m.parentNode.insertBefore(a, m);
+})(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
+ga('create', 'UA-59823994-1', 'auto');
+ga('send', 'pageview');
+</script>
     {% endif %}
 
     <script src="https://cdn.auth0.com/js/lock/10.6/lock.min.js"></script>
     <script>
-      var lock = new Auth0Lock('{{ AUTH0_CLIENT_ID }}', '{{ AUTH0_DOMAIN }}', {
-        auth: {
-          redirectUrl: document.location.protocol + '//' + document.location.host + '/auth/callback',
-          responseType: 'code',
-          params: {
-            scope: 'openid email' // Learn about scopes: https://auth0.com/docs/scopes
-          }
-        }
-      });
-      $('a.login').on('click', function(event) {
-        event.preventDefault();
-        lock.show();
-      });
-      $('.messages').on('click', 'button.close', function(event) {
-         if ($('.messages div.alert').length <= 1) {
-             $('.messages').remove();
-         }
-      });
-    </script>
+    var lock = new Auth0Lock('{{ AUTH0_CLIENT_ID }}', '{{ AUTH0_DOMAIN }}', {
+  auth: {
+    redirectUrl:
+      document.location.protocol +
+      '//' +
+      document.location.host +
+      '/auth/callback',
+    responseType: 'code',
+    params: {
+      scope: 'openid email' // Learn about scopes: https://auth0.com/docs/scopes
+    }
+  }
+});
+$('a.login').on('click', function(event) {
+  event.preventDefault();
+  lock.show();
+});
+$('.messages').on('click', 'button.close', function(event) {
+  if ($('.messages div.alert').length <= 1) {
+    $('.messages').remove();
+  }
+});
+</script>
 </body>
 
 </html>

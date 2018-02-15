@@ -17,6 +17,7 @@ def generate_new_key(length=24):
 
 def home(request):
     context = {}
+    print(request.user)
     if request.method == 'POST':
         assert request.user.is_authenticated
         if 'domain' in request.POST:

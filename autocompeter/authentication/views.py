@@ -129,7 +129,8 @@ def callback(request):
         return redirect('main:home')
     else:
         user.backend = 'django.contrib.auth.backends.ModelBackend'
-        login(request, user)
+        print("logging in user", user)
+        print(login(request, user))
         messages.success(
             request,
             'Signed in with email: {}'.format(user.email)
